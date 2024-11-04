@@ -212,7 +212,7 @@ $light_gray:#fff;
 $cursor: #fff;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
-  .login-container .el-input input {
+ .login-container.el-input input {
     color: $cursor;
   }
 }
@@ -222,10 +222,19 @@ input[type="password"]::-ms-reveal {
 input[type="password"]::-ms-clear {
     display: none; /* 对于IE */
 }
-
 input[type="password"]::-webkit-inner-spin-button,
 input[type="password"]::-webkit-calendar-picker-indicator {
-    display: none; /* 针对 Chrome 和 Safari */
+    display: none; /* 针对Chrome和Safari */
+}
+input:-webkit-autofill {
+    box-shadow: 0 0 0px 1000px $bg inset!important;
+    -webkit-text-fill-color: $cursor!important;
+}
+// 新增以下样式，针对自动填充且焦点状态下的样式优化
+input:-webkit-autofill:focus {
+    box-shadow: 0 0 0px 1000px $bg inset!important;
+    -webkit-text-fill-color: $cursor!important;
+    border: 1px solid rgba(255, 255, 255, 0.1)!important;
 }
 /* reset element-ui css */
 .login-container {
