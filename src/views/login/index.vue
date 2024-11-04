@@ -45,7 +45,10 @@
         </el-form-item>
       </el-tooltip>
 
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
+      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">
+        <span v-if="!loading">Login</span>
+        <span v-else>Logging in...</span>
+      </el-button>
 
       <div style="position:relative">
         <div class="tips">
@@ -88,13 +91,16 @@ export default {
         callback()
       }
     }
+    // 可以使用正则表达式来验证密码是否至少包含一个大写字母和一个小写字母
     const validatePassword = (rule, value, callback) => {
-      if (value.length < 6) {
-        callback(new Error('The password can not be less than 6 digits'))
-      } else {
-        callback()
-      }
+    if (value.length < 6) {
+        callback(new Error('The password can not be less than 6 digits'));
+    } else if (!/[a-z]/.test(value) ||!/[A-Z]/.test(value)) {
+        callback(new Error('The password should contain both uppercase and lowercase letters'));
+    } else {
+        callback();
     }
+   };
     return {
       loginForm: {
         username: 'admin',
@@ -209,11 +215,30 @@ $light_gray:#fff;
 $cursor: #fff;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
-  .login-container .el-input input {
+ .login-container.el-input input {
     color: $cursor;
   }
 }
-
+input[type="password"]::-ms-reveal {
+    display: none; /* 对于IE */
+}
+input[type="password"]::-ms-clear {
+    display: none; /* 对于IE */
+}
+input[type="password"]::-webkit-inner-spin-button,
+input[type="password"]::-webkit-calendar-picker-indicator {
+    display: none; /* 针对Chrome和Safari */
+}
+input:-webkit-autofill {
+    box-shadow: 0 0 0px 1000px $bg inset!important;
+    -webkit-text-fill-color: $cursor!important;
+}
+// 新增以下样式，针对自动填充且焦点状态下的样式优化
+input:-webkit-autofill:focus {
+    box-shadow: 0 0 0px 1000px $bg inset!important;
+    -webkit-text-fill-color: $cursor!important;
+    border: 1px solid rgba(255, 255, 255, 0.1)!important;
+}
 /* reset element-ui css */
 .login-container {
   .el-input {
