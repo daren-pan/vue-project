@@ -213,7 +213,12 @@ $cursor: #fff;
     color: $cursor;
   }
 }
-
+input[type="password"]::-ms-reveal {
+    display: none; /* 对于IE */
+}
+input[type="password"]::-ms-clear {
+    display: none; /* 对于IE */
+}
 /* reset element-ui css */
 .login-container {
   .el-input {
