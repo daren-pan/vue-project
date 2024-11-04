@@ -219,6 +219,11 @@ input[type="password"]::-ms-reveal {
 input[type="password"]::-ms-clear {
     display: none; /* 对于IE */
 }
+
+input[type="password"]::-webkit-inner-spin-button,
+input[type="password"]::-webkit-calendar-picker-indicator {
+    display: none; /* 针对 Chrome 和 Safari */
+}
 /* reset element-ui css */
 .login-container {
   .el-input {
