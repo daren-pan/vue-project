@@ -88,13 +88,16 @@ export default {
         callback()
       }
     }
+    // 可以使用正则表达式来验证密码是否至少包含一个大写字母和一个小写字母
     const validatePassword = (rule, value, callback) => {
-      if (value.length < 6) {
-        callback(new Error('The password can not be less than 6 digits'))
-      } else {
-        callback()
-      }
+    if (value.length < 6) {
+        callback(new Error('The password can not be less than 6 digits'));
+    } else if (!/[a-z]/.test(value) ||!/[A-Z]/.test(value)) {
+        callback(new Error('The password should contain both uppercase and lowercase letters'));
+    } else {
+        callback();
     }
+   };
     return {
       loginForm: {
         username: 'admin',
