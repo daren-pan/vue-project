@@ -45,7 +45,10 @@
         </el-form-item>
       </el-tooltip>
 
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
+      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">
+        <span v-if="!loading">Login</span>
+        <span v-else>Logging in...</span>
+      </el-button>
 
       <div style="position:relative">
         <div class="tips">
