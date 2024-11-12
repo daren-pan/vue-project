@@ -36,6 +36,13 @@ module.exports = {
       warnings: false,
       errors: true
     },
+    proxy: {
+      '/grafana': {
+        target: 'http://localhost:3030', // 替换为服务器 B 的域名或 IP 地址
+        changeOrigin: true,
+        pathRewrite: { '^/grafana': '' } // 如果服务器 B 的接口不以 /api 开头，去掉前缀
+      }
+    },
     before: require('./mock/mock-server.js')
   },
   configureWebpack: {
