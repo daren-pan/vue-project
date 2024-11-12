@@ -16,6 +16,12 @@ const chartsRouter = {
       path: 'keyboard',
       component: () => import('@/views/charts/keyboard'),
       name: 'KeyboardChart',
+      meta: { title: '查看最短路径', noCache: true }
+    },
+    {
+      path: 'keyboard',
+      component: () => import('@/views/charts/keyboard'),
+      name: 'KeyboardChart',
       meta: { title: '查看SID', noCache: true }
     },
     {
