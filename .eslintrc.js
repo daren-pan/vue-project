@@ -69,6 +69,7 @@ module.exports = {
       'newIsCap': true,
       'capIsNew': false
     }],
+    'vue/no-unused-components': 'off',
     'new-parens': 2,
     'no-array-constructor': 2,
     'no-caller': 2,
