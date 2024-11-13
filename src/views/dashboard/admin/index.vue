@@ -14,6 +14,11 @@
         </template>
       </el-table-column>
     </el-table>
+    <el-image
+      style="width: 100%; height: 100%"
+      :src="require('@/assets/custom-theme/topology.png')"
+      fit="fill"
+    />
   </div>
 </template>
 
@@ -74,6 +79,7 @@ export default {
         })
         .catch(error => console.error('Error fetching table data:', error))
     }
+
   }
 }
 </script>
