@@ -42,6 +42,7 @@
 </template>
 
 <script>
+import { API_URL } from '@/config/APIconfig'
 import axios from 'axios'
 
 export default {
@@ -64,7 +65,7 @@ export default {
 
         // 发送 DELETE 请求
         const response = await axios.delete(
-          `http://localhost:5060/route/del_steer?router=${this.router}`,
+          API_URL + `/route/del_steer?router=${this.router}`,
           {
             headers: { 'Content-Type': 'application/json' },
             data

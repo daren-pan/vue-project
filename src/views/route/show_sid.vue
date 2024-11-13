@@ -35,6 +35,7 @@
 </template>
 
 <script>
+import { API_URL } from '@/config/APIconfig'
 import axios from 'axios'
 
 export default {
@@ -57,7 +58,7 @@ export default {
       this.loading = true
       this.error = null
       axios
-        .get(`http://localhost:5060/route/show_sid`, { params: { router: this.selectedRouter }})
+        .get(API_URL + `/route/show_sid`, { params: { router: this.selectedRouter }})
         .then((response) => {
           if (response.data && response.data.localsids) {
             this.sidData = response.data.localsids // 保存 SID 数据
