@@ -3,49 +3,61 @@
 import Layout from '@/layout'
 
 const chartsRouter = {
-  path: '/charts',
+  path: '/route',
   component: Layout,
   redirect: 'noRedirect',
-  name: 'Charts',
+  name: 'Route',
   meta: {
     title: '路由控制',
     icon: 'tree'
   },
   children: [
     {
-      path: 'keyboard',
-      component: () => import('@/views/charts/keyboard'),
-      name: 'KeyboardChart',
+      path: 'show_paths',
+      component: () => import('@/views/route/show_paths'),
+      name: 'ShowPaths',
       meta: { title: '查看最短路径', noCache: true }
     },
     {
-      path: 'keyboard',
-      component: () => import('@/views/charts/keyboard'),
-      name: 'KeyboardChart',
+      path: 'show_sid',
+      component: () => import('@/views/route/show_sid'),
+      name: 'ShowSID',
       meta: { title: '查看SID', noCache: true }
     },
     {
-      path: 'line',
-      component: () => import('@/views/charts/line'),
-      name: 'LineChart',
+      path: 'show_policy',
+      component: () => import('@/views/route/show_policy.vue'),
+      name: 'ShowPolicy',
       meta: { title: '查看路由', noCache: true }
     },
     {
-      path: 'mix-chart',
-      component: () => import('@/views/charts/mix-chart'),
-      name: 'MixChart',
+      path: 'show_steer',
+      component: () => import('@/views/route/show_steer'),
+      name: 'ShowSteer',
+      meta: { title: '查看引导', noCache: true }
+    },
+    {
+      path: 'add_policy',
+      component: () => import('@/views/route/add_policy.vue'),
+      name: 'AddPolicy',
       meta: { title: '添加路由', noCache: true }
     },
     {
-      path: 'mix-chart',
-      component: () => import('@/views/charts/mix-chart'),
-      name: 'MixChart',
+      path: 'steer',
+      component: () => import('@/views/route/steer.vue'),
+      name: 'Steer',
       meta: { title: '更新引导', noCache: true }
     },
     {
-      path: 'mix-chart',
-      component: () => import('@/views/charts/mix-chart'),
-      name: 'MixChart',
+      path: 'del_steer',
+      component: () => import('@/views/route/del_steer.vue'),
+      name: 'DelSteer',
+      meta: { title: '删除引导', noCache: true }
+    },
+    {
+      path: 'del_policy',
+      component: () => import('@/views/route/del_policy.vue'),
+      name: 'DelPolicy',
       meta: { title: '删除路由', noCache: true }
     }
   ]
