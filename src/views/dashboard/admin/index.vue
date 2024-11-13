@@ -1,5 +1,10 @@
 <template>
   <div class="dashboard-editor-container">
+    <el-image
+      style="width: 100%; height: 100%"
+      :src="require('@/assets/custom-theme/topology.png')"
+      fit="fill"
+    />
     <el-table :data="tableData" border style="width: 100%">
       <el-table-column prop="date" label="所属集群" width="180" />
       <el-table-column prop="name" label="Node 名称" width="180" />
@@ -14,11 +19,7 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-image
-      style="width: 100%; height: 100%"
-      :src="require('@/assets/custom-theme/topology.png')"
-      fit="fill"
-    />
+
   </div>
 </template>
 
