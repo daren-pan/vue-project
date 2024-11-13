@@ -62,7 +62,7 @@ export default {
           sids: this.sids
         }
 
-        const response = await axios.post(`http://localhost:5060/route/add_policy?router=${this.router}`, data, {
+        const response = await axios.post(`http://localhost:3000/route/add_policy?router=${this.router}`, data, {
           headers: { 'Content-Type': 'application/json' }
         })
 

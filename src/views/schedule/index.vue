@@ -56,7 +56,7 @@ export default {
   methods: {
     fetchScheduleDecision() {
       axios
-        .get('http://localhost:5060/schedule')
+        .get('http://localhost:3000/schedule')
         .then((response) => {
           const data = response.data
           this.averageResources = data.average_resource || []

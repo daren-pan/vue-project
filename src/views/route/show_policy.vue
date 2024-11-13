@@ -57,7 +57,7 @@ export default {
       this.loading = true
       this.error = null
       axios
-        .get(`http://localhost:5060/route/show_policy`, { params: { router: this.selectedRouter }})
+        .get(`http://localhost:3000/route/show_policy`, { params: { router: this.selectedRouter }})
         .then((response) => {
           if (response.data && response.data.policies) {
             this.policyData = response.data.policies // 保存策略数据

@@ -45,7 +45,7 @@ export default {
       this.loading = true
       this.error = null
       axios
-        .get('http://localhost:5060/route/show_paths')
+        .get('http://localhost:3000/route/show_paths')
         .then((response) => {
           // 检查响应中是否有 paths 数据
           if (response.data && response.data.paths) {

@@ -57,7 +57,7 @@ export default {
       this.loading = true
       this.error = null
       axios
-        .get(`http://localhost:5060/route/show_sid`, { params: { router: this.selectedRouter }})
+        .get(`http://localhost:3000/route/show_sid`, { params: { router: this.selectedRouter }})
         .then((response) => {
           if (response.data && response.data.localsids) {
             this.sidData = response.data.localsids // 保存 SID 数据

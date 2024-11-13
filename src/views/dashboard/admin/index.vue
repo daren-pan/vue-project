@@ -36,7 +36,7 @@ export default {
   },
   methods: {
     fetchTableData() {
-      fetch('http://localhost:5000/dashboard/nodes', {
+      fetch('http://localhost:3000/dashboard/nodes', {
         method: 'Get',
         headers: {
           'Content-Type': 'application/json'

@@ -64,7 +64,7 @@ export default {
 
         // 发送 DELETE 请求
         const response = await axios.delete(
-          `http://localhost:5060/route/del_policy?router=${this.router}`,
+          `http://localhost:3000/route/del_policy?router=${this.router}`,
           {
             headers: { 'Content-Type': 'application/json' },
             data

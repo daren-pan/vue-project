@@ -3,25 +3,25 @@
 import Layout from '@/layout'
 
 const tableRouter = {
-  path: '/table',
+  path: '/deploy',
   component: Layout,
-  redirect: '/table/complex-table',
-  name: 'Table',
+  redirect: '/deploy/app',
+  name: 'Deploy',
   meta: {
     title: '算力请求',
     icon: 'edit'
   },
   children: [
     {
-      path: 'dynamic-table',
-      component: () => import('@/views/table/dynamic-table/index'),
-      name: 'DynamicTable',
+      path: 'app',
+      component: () => import('@/views/deploy/app.vue'),
+      name: 'DeployApp',
       meta: { title: '应用部署' }
     },
     {
-      path: 'drag-table',
-      component: () => import('@/views/table/drag-table'),
-      name: 'DragTable',
+      path: 'service',
+      component: () => import('@/views/deploy/service.vue'),
+      name: 'DeployService',
       meta: { title: '服务部署' }
     }
   ]

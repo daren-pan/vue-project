@@ -57,7 +57,7 @@ export default {
       this.loading = true
       this.error = null
       axios
-        .get(`http://localhost:5060/route/show_steer`, { params: { router: this.selectedRouter }})
+        .get(`http://localhost:3000/route/show_steer`, { params: { router: this.selectedRouter }})
         .then((response) => {
           if (response.data && response.data.steering_policies) {
             this.policyData = response.data.steering_policies // 保存策略数据
