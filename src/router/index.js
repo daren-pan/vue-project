@@ -84,13 +84,13 @@ export const constantRoutes = [
     ]
   },
   {
-    path: '/documentation',
+    path: '/grafana',
     component: Layout,
     children: [
       {
         path: 'index',
-        component: () => import('@/views/documentation/index'),
-        name: 'Documentation',
+        component: () => import('@/views/grafana/index'),
+        name: 'Grafana',
         meta: { title: '算力可视化', icon: 'chart', affix: true }
       }
     ]
