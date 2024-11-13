@@ -41,6 +41,7 @@
 </template>
 
 <script>
+import { API_URL } from '@/config/APIconfig'
 import axios from 'axios'
 
 export default {
@@ -62,7 +63,7 @@ export default {
           ip_prefix: this.ip_prefix
         }
 
-        const response = await axios.post(`http://localhost:5060/route/steer?router=${this.router}`, data, {
+        const response = await axios.post(API_URL + `/route/steer?router=${this.router}`, data, {
           headers: { 'Content-Type': 'application/json' }
         })
 

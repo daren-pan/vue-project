@@ -37,6 +37,7 @@
 </template>
 
 <script>
+import { API_URL } from '@/config/APIconfig'
 import axios from 'axios'
 
 export default {
@@ -56,7 +57,7 @@ export default {
   methods: {
     fetchScheduleDecision() {
       axios
-        .get('http://localhost:5060/schedule')
+        .get(API_URL + '/schedule')
         .then((response) => {
           const data = response.data
           this.averageResources = data.average_resource || []

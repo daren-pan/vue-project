@@ -42,7 +42,7 @@
 
 <script>
 import axios from 'axios'
-
+import { API_URL } from '@/config/APIconfig'
 export default {
   data() {
     return {
@@ -62,7 +62,7 @@ export default {
           sids: this.sids
         }
 
-        const response = await axios.post(`http://localhost:5060/route/add_policy?router=${this.router}`, data, {
+        const response = await axios.post(API_URL + `/route/add_policy?router=${this.router}`, data, {
           headers: { 'Content-Type': 'application/json' }
         })
 

@@ -24,6 +24,7 @@
 </template>
 
 <script>
+import { API_URL } from '@/config/APIconfig'
 export default {
   name: 'DashboardAdmin',
   data() {
@@ -36,7 +37,7 @@ export default {
   },
   methods: {
     fetchTableData() {
-      fetch('http://localhost:5000/dashboard/nodes', {
+      fetch(API_URL + '/dashboard/nodes', {
         method: 'Get',
         headers: {
           'Content-Type': 'application/json'
