@@ -1,32 +1,18 @@
 <template>
   <div class="dashboard-editor-container">
-    <el-table
-      :data="tableData"
-      border
-      style="width: 100%"
-    >
-      <el-table-column
-        prop="date"
-        label="所属集群"
-        width="180"
-      />
-      <el-table-column
-        prop="name"
-        label="Node 名称"
-        width="180"
-      />
-      <el-table-column
-        prop="address"
-        label="Node IP"
-      />
-      <el-table-column
-        prop="role"
-        label="Role"
-      />
-      <el-table-column
-        prop="status"
-        label="状态"
-      />
+    <el-table :data="tableData" border style="width: 100%">
+      <el-table-column prop="date" label="所属集群" width="180" />
+      <el-table-column prop="name" label="Node 名称" width="180" />
+      <el-table-column prop="address" label="Node IP" />
+      <el-table-column prop="role" label="Role" />
+      <el-table-column prop="status" label="状态">
+        <template slot-scope="scope">
+          <el-tag
+            :type="scope.row.status === 'Ready' ? 'success' : 'danger'"
+            disable-transitions
+          >{{ scope.row.status }}</el-tag>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
@@ -44,7 +30,7 @@ export default {
   },
   methods: {
     fetchTableData() {
-      fetch('http://localhost:5090/dashboard/nodes', {
+      fetch('http://localhost:5000/dashboard/nodes', {
         method: 'Get',
         headers: {
           'Content-Type': 'application/json'
@@ -52,10 +38,33 @@ export default {
       })
         .then(response => response.json())
         .then(data => {
-          console.log('looking handsome', data)
+          // 转换数据为json
+          const parseClusterData = (clusterString, clusterName) => {
+            const rows = clusterString.trim().split('\n').slice(1)
+            return rows.map(row => {
+              const columns = row.trim().split(/\s{2,}/)
+              return {
+                cluster: clusterName,
+                name: columns[0],
+                status: columns[1],
+                role: columns[2],
+                age: columns[3],
+                version: columns[4],
+                ip: columns[5],
+                externalIp: columns[6] || '<none>',
+                osImage: columns[7],
+                kernelVersion: columns[8],
+                containerRuntime: columns[9]
+              }
+            })
+          }
+          const clusterAData = parseClusterData(data.cluster_a, 'Cluster A')
+          const clusterBData = parseClusterData(data.cluster_b, 'Cluster B')
+          const combinedData = [...clusterAData, ...clusterBData]
+          console.log('looking handsome', combinedData)
 
           // 假设返回的数据包含节点列表，并转换成表格所需格式
-          this.tableData = data.map(node => ({
+          this.tableData = combinedData.map(node => ({
             date: node.cluster, // 假设 cluster 表示集群
             name: node.name, // 假设 name 表示节点名称
             address: node.ip, // 假设 ip 表示节点 IP
