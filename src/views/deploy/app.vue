@@ -1,5 +1,6 @@
 <template>
   <div class="dashboard-editor-container">
+    <el-button class="edit-yaml-button" type="primary" @click="openYamlEditorDialog">编辑 YAML</el-button>
     <el-table :data="tableData" border style="width: 100%">
       <el-table-column prop="cluster" label="Cluster" />
       <el-table-column prop="namespace" label="Namespace" />
@@ -11,6 +12,25 @@
       <el-table-column prop="restarts" label="Restarts" />
       <el-table-column prop="age" label="Age" />
     </el-table>
+    <!-- YAML 编辑器弹框 -->
+    <el-dialog
+      title="编辑 YAML"
+      :visible.sync="yamlEditorVisible"
+      width="50%"
+      @close="closeYamlEditorDialog"
+    >
+      <div class="editor-container">
+        <textarea
+          v-model="yamlContent"
+          style="width: 100%; height: 400px;"
+          placeholder="编辑 YAML 内容"
+        />
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="closeYamlEditorDialog">取消</el-button>
+        <el-button type="primary" @click="saveYamlChanges">部署</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -20,7 +40,9 @@ export default {
   name: 'DashboardAdmin',
   data() {
     return {
-      tableData: [] // 初始为空数组，将在 mounted 时获取数据
+      tableData: [], // 初始为空数组，将在 mounted 时获取数据
+      yamlEditorVisible: false, // 控制 YAML 编辑器弹框的显示
+      yamlContent: '' // YAML 编辑器中的内容
     }
   },
   mounted() {
@@ -56,6 +78,19 @@ export default {
           }))
         })
         .catch(error => console.error('Error fetching table data:', error))
+    },
+    openYamlEditorDialog() {
+      // 打开 YAML 编辑器弹框
+      this.yamlEditorVisible = true
+    },
+    closeYamlEditorDialog() {
+      // 关闭 YAML 编辑器弹框
+      this.yamlEditorVisible = false
+    },
+    saveYamlChanges() {
+      // 保存 YAML 数据，无需转换为 JSON
+      console.log('保存的 YAML 数据:', this.yamlContent)
+      this.closeYamlEditorDialog() // 关闭弹框
     }
   }
 }
