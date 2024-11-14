@@ -5,14 +5,14 @@
 
     <!-- 表格展示 -->
     <el-table :data="tableData" border style="width: 100%" :fit="true">
-      <el-table-column prop="cluster" label="Cluster" />
+      <el-table-column prop="cluster" label="集群" />
       <el-table-column prop="namespace" label="Namespace" />
-      <el-table-column prop="name" label="Name" />
-      <el-table-column prop="type" label="Type" />
-      <el-table-column prop="clusterIp" label="Cluster IP" />
-      <el-table-column prop="externalIp" label="External IP" />
-      <el-table-column prop="ports" label="Ports" />
-      <el-table-column prop="age" label="Age" />
+      <el-table-column prop="name" label="名称" />
+      <el-table-column prop="type" label="类型" />
+      <el-table-column prop="clusterIp" label="集群 IP" />
+      <el-table-column prop="externalIp" label="外部 IP" />
+      <el-table-column prop="ports" label="端口" />
+      <el-table-column prop="age" label="寿命" />
     </el-table>
 
     <!-- YAML 编辑器弹框 -->

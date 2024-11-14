@@ -2,15 +2,15 @@
   <div v-loading="loading" class="dashboard-editor-container">
     <el-button class="edit-yaml-button" type="primary" @click="openYamlEditorDialog">编辑 YAML</el-button>
     <el-table :data="tableData" border style="width: 100%" height="800">
-      <el-table-column prop="cluster" label="Cluster" />
+      <el-table-column prop="cluster" label="集群" />
       <el-table-column prop="namespace" label="Namespace" />
-      <el-table-column prop="name" label="Name" />
-      <el-table-column prop="status" label="Status" />
+      <el-table-column prop="name" label="名称" />
+      <el-table-column prop="status" label="状态" />
       <el-table-column prop="ip" label="IP" />
       <el-table-column prop="node" label="Node" />
-      <el-table-column prop="ready" label="Ready" />
-      <el-table-column prop="restarts" label="Restarts" />
-      <el-table-column prop="age" label="Age" />
+      <el-table-column prop="ready" label="就绪" />
+      <el-table-column prop="restarts" label="重启" />
+      <el-table-column prop="age" label="寿命" />
     </el-table>
     <!-- YAML 编辑器弹框 -->
     <el-dialog title="编辑 YAML" :visible.sync="yamlEditorVisible" width="50%" @close="closeYamlEditorDialog">
