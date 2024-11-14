@@ -28,37 +28,13 @@ const chartsRouter = {
       path: 'show_policy',
       component: () => import('@/views/route/show_policy.vue'),
       name: 'ShowPolicy',
-      meta: { title: '查看路由', noCache: true }
+      meta: { title: '路由策略管理', noCache: true }
     },
     {
       path: 'show_steer',
       component: () => import('@/views/route/show_steer'),
       name: 'ShowSteer',
-      meta: { title: '查看引导', noCache: true }
-    },
-    {
-      path: 'add_policy',
-      component: () => import('@/views/route/add_policy.vue'),
-      name: 'AddPolicy',
-      meta: { title: '添加路由', noCache: true }
-    },
-    {
-      path: 'steer',
-      component: () => import('@/views/route/steer.vue'),
-      name: 'Steer',
-      meta: { title: '更新引导', noCache: true }
-    },
-    {
-      path: 'del_steer',
-      component: () => import('@/views/route/del_steer.vue'),
-      name: 'DelSteer',
-      meta: { title: '删除引导', noCache: true }
-    },
-    {
-      path: 'del_policy',
-      component: () => import('@/views/route/del_policy.vue'),
-      name: 'DelPolicy',
-      meta: { title: '删除路由', noCache: true }
+      meta: { title: '引导策略管理', noCache: true }
     }
   ]
 }
