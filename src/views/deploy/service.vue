@@ -40,7 +40,21 @@ export default {
     return {
       tableData: [], // 初始为空数组，将在 mounted 时获取数据
       yamlEditorVisible: false, // 控制 YAML 编辑器弹框的显示
-      yamlContent: '', // YAML 编辑器中的内容
+      yamlContent: `apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  type: NodePort # 服务类型
+  ports:
+  - port: 80 # Service端口
+    protocol: TCP # 协议
+    targetPort: 80 # 容器端口
+    nodePort: 30009  # 对外暴露的端口，可以指定
+  selector:
+    app: web # 指定关联Pod的标签`, // YAML 编辑器中的内容
       loading: false,
       value: ''
     }
