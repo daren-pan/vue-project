@@ -33,7 +33,43 @@ export default {
     return {
       tableData: [], // 初始为空数组，将在 mounted 时获取数据
       yamlEditorVisible: false, // 控制 YAML 编辑器弹框的显示
-      yamlContent: '', // YAML 编辑器中的内容
+      yamlContent: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: default
+  annotations:       # 记录回滚参数
+    kubernetes.io/change-cause: "web.v1-nginx-1.19"   #记录到revision中的内容，记录版本号
+spec:
+  replicas: 3 # Pod副本预期数量
+  revisionHistoryLimit: 10 # RS历史版本保存数量
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%             # 滚动更新过程最大pod副本数
+      maxUnavailable: 25%       # 滚动更新过程中最大不可用pod副本数，
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: web # Pod副本的标签
+    spec:
+      containers:
+      - name: web
+        image: nginx:1.16
+        readinessProbe:          # 存活检查,如果失败，将杀死容器，来重启
+          httpGet:
+            port: 80
+            path: /index.html
+          initialDelaySeconds: 10 # 启动容器后多少秒健康检查
+          periodSeconds: 10 # 以后间隔多少秒检查一次
+
+        livenessProbe:   # 就绪检查，失败就会剔除 service 
+          httpGet:
+            port: 80
+            path: /index.html`, // YAML 默认内容
       loading: false
     }
   },
