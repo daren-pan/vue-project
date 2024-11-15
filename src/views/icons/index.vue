@@ -1,101 +1,52 @@
 <template>
   <div class="icons-container">
-    <aside>
-      <a href="https://panjiachen.github.io/vue-element-admin-site/guide/advanced/icon.html" target="_blank">Add and use
-      </a>
-    </aside>
-    <el-tabs type="border-card">
-      <el-tab-pane label="Icons">
-        <div class="grid">
-          <div v-for="item of svgIcons" :key="item" @click="handleClipboard(generateIconCode(item),$event)">
-            <el-tooltip placement="top">
-              <div slot="content">
-                {{ generateIconCode(item) }}
-              </div>
-              <div class="icon-item">
-                <svg-icon :icon-class="item" class-name="disabled" />
-                <span>{{ item }}</span>
-              </div>
-            </el-tooltip>
-          </div>
-        </div>
-      </el-tab-pane>
-      <el-tab-pane label="Element-UI Icons">
-        <div class="grid">
-          <div v-for="item of elementIcons" :key="item" @click="handleClipboard(generateElementIconCode(item),$event)">
-            <el-tooltip placement="top">
-              <div slot="content">
-                {{ generateElementIconCode(item) }}
-              </div>
-              <div class="icon-item">
-                <i :class="'el-icon-' + item" />
-                <span>{{ item }}</span>
-              </div>
-            </el-tooltip>
-          </div>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
+    <div ref="terminalContainer" style="height:90vh; width: 100%;" />
   </div>
 </template>
 
 <script>
-import clipboard from '@/utils/clipboard'
-import svgIcons from './svg-icons'
-import elementIcons from './element-icons'
+import { Terminal } from 'xterm'
+import { FitAddon } from 'xterm-addon-fit'
+import 'xterm/css/xterm.css'
 
 export default {
-  name: 'Icons',
-  data() {
-    return {
-      svgIcons,
-      elementIcons
-    }
+  name: 'TerminalComponent',
+  mounted() {
+    this.initTerminal()
   },
   methods: {
-    generateIconCode(symbol) {
-      return `<svg-icon icon-class="${symbol}" />`
-    },
-    generateElementIconCode(symbol) {
-      return `<i class="el-icon-${symbol}" />`
-    },
-    handleClipboard(text, event) {
-      clipboard(text, event)
+    initTerminal() {
+      const terminal = new Terminal()
+      const fitAddon = new FitAddon()
+
+      terminal.loadAddon(fitAddon)
+      terminal.open(this.$refs.terminalContainer)
+      fitAddon.fit()
+
+      // 连接到 WebSocket 服务器
+      const socket = new WebSocket('ws://localhost:2999')
+
+      socket.onopen = () => {
+        console.log('WebSocket 连接已建立')
+      }
+
+      socket.onmessage = (event) => {
+        // 将服务器的响应显示在终端中
+        terminal.write(event.data)
+      }
+
+      terminal.onData(data => {
+        // 将终端的输入发送到服务器
+        socket.send(data)
+      })
     }
   }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="css" scoped>
 .icons-container {
   margin: 10px 20px 0;
   overflow: hidden;
-
-  .grid {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  }
-
-  .icon-item {
-    margin: 20px;
-    height: 85px;
-    text-align: center;
-    width: 100px;
-    float: left;
-    font-size: 30px;
-    color: #24292e;
-    cursor: pointer;
-  }
-
-  span {
-    display: block;
-    font-size: 16px;
-    margin-top: 10px;
-  }
-
-  .disabled {
-    pointer-events: none;
-  }
 }
 </style>

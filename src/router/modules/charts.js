@@ -3,32 +3,38 @@
 import Layout from '@/layout'
 
 const chartsRouter = {
-  path: '/charts',
+  path: '/route',
   component: Layout,
   redirect: 'noRedirect',
-  name: 'Charts',
+  name: 'Route',
   meta: {
-    title: 'Charts',
-    icon: 'chart'
+    title: '路由控制',
+    icon: 'tree'
   },
   children: [
     {
-      path: 'keyboard',
-      component: () => import('@/views/charts/keyboard'),
-      name: 'KeyboardChart',
-      meta: { title: 'Keyboard Chart', noCache: true }
+      path: 'show_paths',
+      component: () => import('@/views/route/show_paths'),
+      name: 'ShowPaths',
+      meta: { title: '查看最短路径', noCache: true }
     },
     {
-      path: 'line',
-      component: () => import('@/views/charts/line'),
-      name: 'LineChart',
-      meta: { title: 'Line Chart', noCache: true }
+      path: 'show_sid',
+      component: () => import('@/views/route/show_sid'),
+      name: 'ShowSID',
+      meta: { title: '查看SID', noCache: true }
     },
     {
-      path: 'mix-chart',
-      component: () => import('@/views/charts/mix-chart'),
-      name: 'MixChart',
-      meta: { title: 'Mix Chart', noCache: true }
+      path: 'show_policy',
+      component: () => import('@/views/route/show_policy.vue'),
+      name: 'ShowPolicy',
+      meta: { title: '路由策略管理', noCache: true }
+    },
+    {
+      path: 'show_steer',
+      component: () => import('@/views/route/show_steer'),
+      name: 'ShowSteer',
+      meta: { title: '引导策略管理', noCache: true }
     }
   ]
 }

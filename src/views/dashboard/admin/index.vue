@@ -1,97 +1,73 @@
 <template>
   <div class="dashboard-editor-container">
-    <github-corner class="github-corner" />
+    <el-image style="width: 100%; height: 100%" :src="require('@/assets/custom-theme/topology.png')" fit="fill" />
+    <el-table :data="tableData" border style="width: 100%">
+      <el-table-column prop="cluster" label="所属集群" width="150" />
+      <el-table-column prop="name" label="Node 名称" width="150" />
+      <el-table-column prop="address" label="Node IP" />
+      <el-table-column prop="role" label="Role" />
+      <el-table-column prop="uuid" label="算力统一标识" />
+      <el-table-column prop="status" label="状态" width="100">
+        <template slot-scope="scope">
+          <el-tag :type="scope.row.status === 'Ready' ? 'success' : 'danger'" disable-transitions>{{ scope.row.status
+          }}</el-tag>
+        </template>
+      </el-table-column>
+    </el-table>
 
-    <panel-group @handleSetLineChartData="handleSetLineChartData" />
-
-    <el-row style="background:#fff;padding:16px 16px 0;margin-bottom:32px;">
-      <line-chart :chart-data="lineChartData" />
-    </el-row>
-
-    <el-row :gutter="32">
-      <el-col :xs="24" :sm="24" :lg="8">
-        <div class="chart-wrapper">
-          <raddar-chart />
-        </div>
-      </el-col>
-      <el-col :xs="24" :sm="24" :lg="8">
-        <div class="chart-wrapper">
-          <pie-chart />
-        </div>
-      </el-col>
-      <el-col :xs="24" :sm="24" :lg="8">
-        <div class="chart-wrapper">
-          <bar-chart />
-        </div>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="8">
-      <el-col :xs="{span: 24}" :sm="{span: 24}" :md="{span: 24}" :lg="{span: 12}" :xl="{span: 12}" style="padding-right:8px;margin-bottom:30px;">
-        <transaction-table />
-      </el-col>
-      <el-col :xs="{span: 24}" :sm="{span: 12}" :md="{span: 12}" :lg="{span: 6}" :xl="{span: 6}" style="margin-bottom:30px;">
-        <todo-list />
-      </el-col>
-      <el-col :xs="{span: 24}" :sm="{span: 12}" :md="{span: 12}" :lg="{span: 6}" :xl="{span: 6}" style="margin-bottom:30px;">
-        <box-card />
-      </el-col>
-    </el-row>
   </div>
 </template>
 
 <script>
-import GithubCorner from '@/components/GithubCorner'
-import PanelGroup from './components/PanelGroup'
-import LineChart from './components/LineChart'
-import RaddarChart from './components/RaddarChart'
-import PieChart from './components/PieChart'
-import BarChart from './components/BarChart'
-import TransactionTable from './components/TransactionTable'
-import TodoList from './components/TodoList'
-import BoxCard from './components/BoxCard'
-
-const lineChartData = {
-  newVisitis: {
-    expectedData: [100, 120, 161, 134, 105, 160, 165],
-    actualData: [120, 82, 91, 154, 162, 140, 145]
-  },
-  messages: {
-    expectedData: [200, 192, 120, 144, 160, 130, 140],
-    actualData: [180, 160, 151, 106, 145, 150, 130]
-  },
-  purchases: {
-    expectedData: [80, 100, 121, 104, 105, 90, 100],
-    actualData: [120, 90, 100, 138, 142, 130, 130]
-  },
-  shoppings: {
-    expectedData: [130, 140, 141, 142, 145, 150, 160],
-    actualData: [120, 82, 91, 154, 162, 140, 130]
-  }
-}
-
+import { API_URL } from '@/config/APIconfig'
 export default {
   name: 'DashboardAdmin',
-  components: {
-    GithubCorner,
-    PanelGroup,
-    LineChart,
-    RaddarChart,
-    PieChart,
-    BarChart,
-    TransactionTable,
-    TodoList,
-    BoxCard
-  },
   data() {
     return {
-      lineChartData: lineChartData.newVisitis
+      tableData: [] // 初始为空数组，将在 mounted 时获取数据
     }
   },
+  mounted() {
+    this.fetchTableData() // 页面加载时调用数据请求方法
+  },
   methods: {
-    handleSetLineChartData(type) {
-      this.lineChartData = lineChartData[type]
+    fetchTableData() {
+      fetch(API_URL + '/dashboard/nodes', {
+        method: 'Get',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          // 转换数据为json并处理
+          console.log('looking handsome', data)
+
+          // 创建一个空数组来存储表格数据
+          const tableData = []
+
+          // 遍历 cluster_a 和 cluster_b 集群的数据
+          Object.keys(data).forEach(cluster => {
+            data[cluster].forEach(node => {
+              console.log(cluster)
+              // 将每个节点信息转换为表格所需格式
+              tableData.push({
+                cluster: cluster, // 当前集群名
+                name: node.NAME, // 节点名称
+                address: node.ADDRESS, // 节点 IP 地址
+                role: node.ROLES, // 节点角色
+                status: node.STATUS, // 节点状态
+                uuid: node.UUID.replace('uuid=', '') // 处理 UUID 去掉 "uuid=" 字符串
+              })
+            })
+          })
+
+          // 将转换后的数据赋值给表格的数据
+          this.tableData = tableData
+        })
+        .catch(error => console.error('Error fetching table data:', error))
     }
+
   }
 }
 </script>
