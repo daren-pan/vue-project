@@ -8,8 +8,8 @@
         <tr>
           <th>集群</th>
           <th>平均空闲CPU (%)</th>
-          <th>平均空闲内存 (bytes)</th>
-          <th>平均空闲存储 (bytes)</th>
+          <th>平均空闲内存 (Mb)</th>
+          <th>平均空闲存储 (Mb)</th>
           <th>分数</th>
         </tr>
       </thead>
