@@ -73,6 +73,7 @@ export default {
   methods: {
     themeChange(val) {
       console.log(val)
+      debugger
       this.$store.dispatch('settings/changeSetting', {
         key: 'theme',
         value: val
