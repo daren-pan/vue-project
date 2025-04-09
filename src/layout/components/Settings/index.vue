@@ -23,6 +23,11 @@
         <el-switch v-model="sidebarLogo" class="drawer-switch" />
       </div>
 
+      <div class="drawer-item">
+        <span>Open ALL</span>
+        <el-switch v-model="open" class="drawer-switch" @change="openAll" />
+      </div>
+
     </div>
   </div>
 </template>
@@ -33,7 +38,9 @@ import ThemePicker from '@/components/ThemePicker'
 export default {
   components: { ThemePicker },
   data() {
-    return {}
+    return {
+      open: false
+    }
   },
   computed: {
     fixedHeader: {
@@ -72,12 +79,16 @@ export default {
   },
   methods: {
     themeChange(val) {
-      console.log(val)
-      console.log(val)
       this.$store.dispatch('settings/changeSetting', {
         key: 'theme',
         value: val
       })
+    },
+    openAll(val) {
+      this.open = val
+      this.fixedHeader = val
+      this.tagsView = val
+      this.sidebarLogo = val
     }
   }
 }
