@@ -139,7 +139,6 @@ export default {
   },
   methods: {
     checkCapslock(e) {
-      console.log(e)
       this.capsTooltip = e.getModifierState('CapsLock')
     },
     showPwd() {
