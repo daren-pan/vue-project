@@ -139,8 +139,8 @@ export default {
   },
   methods: {
     checkCapslock(e) {
-      const { key } = e
-      this.capsTooltip = key && key.length === 1 && (key >= 'A' && key <= 'Z')
+      console.log(e)
+      this.capsTooltip = e.getModifierState('CapsLock')
     },
     showPwd() {
       if (this.passwordType === 'password') {
