@@ -5,6 +5,9 @@ export default {
     const { path } = params
     this.$router.replace({ path: '/' + path, query })
   },
+  mounted() {
+    console.log(this.$route)
+  },
   render: function(h) {
     return h() // avoid warning message
   }

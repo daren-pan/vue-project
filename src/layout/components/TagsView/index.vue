@@ -9,7 +9,8 @@
         :to="{ path: tag.path, query: tag.query, fullPath: tag.fullPath }"
         tag="span"
         class="tags-view-item"
-        @click.middle.native="!isAffix(tag)?closeSelectedTag(tag):''"
+        @dblclick.left.native="refresh(tag)"
+        @click.middle.native="!isAffix(tag)?closeSelectedTag(tag):'';"
         @contextmenu.prevent.native="openMenu(tag,$event)"
       >
         {{ tag.title }}
@@ -21,6 +22,9 @@
       <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">Close</li>
       <li @click="closeOthersTags">Close Others</li>
       <li @click="closeAllTags(selectedTag)">Close All</li>
+      <li v-if="isAffix(selectedTag)" @click="addAffix(selectedTag)">取消固定标题</li>
+      <li v-else @click="addAffix(selectedTag)">固定标题</li>
+      <li :title="tagsContent" @mouseenter="loadTagData(selectedTag)">data</li>
     </ul>
   </div>
 </template>
@@ -33,11 +37,14 @@ export default {
   components: { ScrollPane },
   data() {
     return {
+      tagsContent: '',
       visible: false,
+      childVisible: false,
       top: 0,
       left: 0,
       selectedTag: {},
-      affixTags: []
+      affixTags: [],
+      lastTag: ''
     }
   },
   computed: {
@@ -71,6 +78,19 @@ export default {
     },
     isAffix(tag) {
       return tag.meta && tag.meta.affix
+    },
+    refresh(tag) {
+      this.$store.dispatch('tagsView/delCachedView', tag).then(() => {
+        this.$nextTick(() => {
+          console.log(this.$store)
+        })
+      })
+    },
+    addAffix(tag) {
+      tag.meta.affix = !tag.meta.affix
+    },
+    loadTagData(tag) {
+      this.tagsContent = `fullPath: ${tag.fullPath},\n meta:{affix: ${tag.meta.affix},\n noCache: ${tag.meta.noCache}, \n time: ${tag.meta.time}}`
     },
     filterAffixTags(routes, basePath = '/') {
       let tags = []
@@ -166,7 +186,7 @@ export default {
           // to reload home page
           this.$router.replace({ path: '/redirect' + view.fullPath })
         } else {
-          this.$router.push('/')
+          this.$router.push('/guide/index')
         }
       }
     },

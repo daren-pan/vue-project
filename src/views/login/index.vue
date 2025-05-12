@@ -116,6 +116,7 @@ export default {
     $route: {
       handler: function(route) {
         const query = route.query
+        console.log(route)
         if (query) {
           this.redirect = query.redirect
           this.otherQuery = this.getOtherQuery(query)
