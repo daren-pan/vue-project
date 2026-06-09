@@ -74,7 +74,7 @@ export const constantRoutes = [
       }
     ]
   },
-  {
+    {
     path: '/user',
     component: Layout,
     hidden: true,
@@ -85,6 +85,37 @@ export const constantRoutes = [
         component: () => import('@/views/system/user/profile/index'),
         name: 'Profile',
         meta: { title: '个人中心', icon: 'user' }
+      }
+    ]
+  },
+  // 工作流管理（作为系统管理下的一级菜单）
+  // 注意：若依的菜单是通过后端 sys_menu 表配置的，此处路由仅作前端组件映射
+  // 实际使用中需要到【系统管理→菜单管理】中配置对应菜单记录，并分配权限
+  {
+    path: '/workflow',
+    component: Layout,
+    alwaysShow: true,
+    redirect: '/workflow/definition',
+    meta: { title: '工作流管理', icon: 'list' },
+    children: [
+      {
+        path: 'definition',
+        component: () => import('@/views/workflow/definition/index'),
+        name: 'WorkflowDefinition',
+        meta: { title: '流程定义', icon: 'list', permissions: ['workflow:definition:list'] }
+      },
+      {
+        path: 'config/:id(\\d+)',
+        component: () => import('@/views/workflow/config/index'),
+        name: 'WorkflowConfig',
+        hidden: true,
+        meta: { title: '流程配置', activeMenu: '/workflow/definition', permissions: ['workflow:definition:edit'] }
+      },
+      {
+        path: 'task',
+        component: () => import('@/views/workflow/task/index'),
+        name: 'WorkflowTask',
+        meta: { title: '我的待办', icon: 'edit', permissions: ['workflow:task:list'] }
       }
     ]
   }

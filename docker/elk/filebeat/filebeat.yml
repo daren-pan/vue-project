@@ -1,0 +1,27 @@
+filebeat.inputs:
+- type: container
+  enabled: true
+  paths:
+    - /var/lib/docker/containers/*/*-json.log
+  json.message_key: log
+  json.keys_under_root: true
+  json.add_error_key: true
+
+processors:
+  - add_docker_metadata:
+      host: "true"
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+  - timestamp:
+      field: "@timestamp"
+      layouts:
+        - "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        - "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        - "yyyy-MM-dd HH:mm:ss"
+      test:
+        - "2023-01-01T12:00:00.000Z"
+
+output.logstash:
+  hosts: ["logstash:5044"]

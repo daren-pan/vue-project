@@ -17,24 +17,43 @@
         <pane size="84">
           <el-col>
             <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-              <el-form-item label="用户名称" prop="userName">
-                <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
-              </el-form-item>
-              <el-form-item label="手机号码" prop="phonenumber">
-                <el-input v-model="queryParams.phonenumber" placeholder="请输入手机号码" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
-              </el-form-item>
-              <el-form-item label="状态" prop="status">
-                <el-select v-model="queryParams.status" placeholder="用户状态" clearable style="width: 240px">
-                  <el-option v-for="dict in dict.type.sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="创建时间">
-                <el-date-picker v-model="dateRange" style="width: 240px" value-format="yyyy-MM-dd" type="daterange" range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-                <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-              </el-form-item>
+              <!-- 表头第一行 -->
+              <div class="query-form-row">
+                <el-form-item label="用户名称" prop="userName">
+                  <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
+                </el-form-item>
+                <el-form-item label="手机号码" prop="phonenumber">
+                  <el-input v-model="queryParams.phonenumber" placeholder="请输入手机号码" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
+                </el-form-item>
+                <el-form-item label="状态" prop="status">
+                  <el-select v-model="queryParams.status" placeholder="用户状态" clearable style="width: 240px">
+                    <el-option v-for="dict in dict.type.sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="创建时间">
+                  <el-date-picker v-model="dateRange" style="width: 240px" value-format="yyyy-MM-dd" type="daterange" range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
+                </el-form-item>
+              </div>
+              <!-- 表头第二行：角色 + 用户昵称 + 搜索/重置 -->
+              <div class="query-form-row query-form-row-second">
+                <el-form-item label="角色" prop="roleName">
+                  <el-input v-model="queryParams.roleName" placeholder="请输入角色名称" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
+                </el-form-item>
+                <el-form-item label="用户昵称" prop="nickName">
+                  <UserSearchInput
+                    v-model="queryParams.nickName"
+                    placeholder="输入姓名搜索"
+                    :min-length="1"
+                    :max-results="10"
+                    @select="handleUserSelect"
+                    @clear="handleQuery"
+                  />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+                  <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+                </el-form-item>
+              </div>
             </el-form>
 
             <el-row :gutter="10" class="mb8">
@@ -60,9 +79,11 @@
               <el-table-column type="selection" width="50" align="center" />
               <el-table-column label="用户编号" align="center" key="userId" prop="userId" v-if="columns.userId.visible" />
               <el-table-column label="用户名称" align="center" key="userName" prop="userName" v-if="columns.userName.visible" :show-overflow-tooltip="true" />
-              <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" v-if="columns.nickName.visible" :show-overflow-tooltip="true" />
+              <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" v-if="columns.nickName.visible" :show-overflow-tooltip="true" />    
               <el-table-column label="部门" align="center" key="deptName" prop="dept.deptName" v-if="columns.deptName.visible" :show-overflow-tooltip="true" />
+              <el-table-column label="岗位" align="center" key="postName" prop="postName" v-if="columns.postName.visible" width="120" :show-overflow-tooltip="true" />
               <el-table-column label="手机号码" align="center" key="phonenumber" prop="phonenumber" v-if="columns.phonenumber.visible" width="120" />
+              <el-table-column label="角色" align="center" key="roleName" prop="roleName" v-if="columns.roleName.visible" width="120" />
               <el-table-column label="状态" align="center" key="status" v-if="columns.status.visible">
                 <template slot-scope="scope">
                   <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)"></el-switch>
@@ -207,11 +228,12 @@ import Treeselect from "@riophae/vue-treeselect"
 import "@riophae/vue-treeselect/dist/vue-treeselect.css"
 import { Splitpanes, Pane } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
+import UserSearchInput from "@/components/UserSearchInput"
 
 export default {
   name: "User",
   dicts: ['sys_normal_disable', 'sys_user_sex'],
-  components: { Treeselect, Splitpanes, Pane },
+  components: { Treeselect, Splitpanes, Pane, UserSearchInput },
   data() {
     return {
       // 遮罩层
@@ -238,6 +260,7 @@ export default {
       open: false,
       // 部门名称
       deptName: undefined,
+            
       // 默认密码
       initPassword: undefined,
       // 日期范围
@@ -267,14 +290,16 @@ export default {
         // 上传的地址
         url: process.env.VUE_APP_BASE_API + "/system/user/importData"
       },
-      // 查询参数
+            // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
         userName: undefined,
+        nickName: undefined,
         phonenumber: undefined,
         status: undefined,
-        deptId: undefined
+        deptId: undefined,
+        roleName: undefined
       },
       // 列信息
       columns: {
@@ -283,6 +308,8 @@ export default {
         nickName: { label: '用户昵称', visible: true },
         deptName: { label: '部门', visible: true },
         phonenumber: { label: '手机号码', visible: true },
+        roleName: { label: '角色', visible: true },
+        postName: { label: '岗位', visible: true },
         status: { label: '状态', visible: true },
         createTime: { label: '创建时间', visible: true }
       },
@@ -335,11 +362,24 @@ export default {
     getList() {
       this.loading = true
       listUser(this.addDateRange(this.queryParams, this.dateRange)).then(response => {
+
+          (response.rows || []).forEach(item => {
+            if (item.roles && Array.isArray(item.roles)) {
+              item.roleName = item.roles.map(role => role.roleName).join(',');
+            } else {
+              item.roleName = ''; // 或根据业务设置默认值
+            }
+          });
           this.userList = response.rows
           this.total = response.total
           this.loading = false
         }
       )
+    },
+    /** 用户搜索组件选中后触发搜索 */
+    handleUserSelect(user) {
+      this.queryParams.nickName = user.nickName || user.label
+      this.handleQuery()
     },
     /** 查询部门下拉树结构 */
     getDeptTree() {
@@ -556,3 +596,13 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* 查询表头分行展示 */
+.query-form-row {
+  display: block;
+}
+.query-form-row-second {
+  margin-top: 6px;
+}
+</style>

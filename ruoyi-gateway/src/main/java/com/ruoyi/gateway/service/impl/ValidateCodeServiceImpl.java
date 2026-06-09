@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import jakarta.annotation.Resource;
 import javax.imageio.ImageIO;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FastByteArrayOutputStream;
@@ -28,6 +31,7 @@ import com.ruoyi.gateway.service.ValidateCodeService;
 @Service
 public class ValidateCodeServiceImpl implements ValidateCodeService
 {
+    private static final Logger log = LoggerFactory.getLogger(ValidateCodeServiceImpl.class);
     @Resource(name = "captchaProducer")
     private Producer captchaProducer;
 
@@ -46,6 +50,7 @@ public class ValidateCodeServiceImpl implements ValidateCodeService
     @Override
     public AjaxResult createCaptcha() throws IOException, CaptchaException
     {
+        log.error("生成验证码中");
         AjaxResult ajax = AjaxResult.success();
         boolean captchaEnabled = captchaProperties.getEnabled();
         ajax.put("captchaEnabled", captchaEnabled);

@@ -1,7 +1,8 @@
 # 基础镜像
-FROM  openjdk:8-jre
+FROM  eclipse-temurin:17-jre
 # author
 MAINTAINER ruoyi
+MAINTAINER ruoyi2
 
 # 挂载目录
 VOLUME /home/ruoyi
@@ -12,4 +13,5 @@ WORKDIR /home/ruoyi
 # 复制jar文件到路径
 COPY ./jar/ruoyi-modules-system.jar /home/ruoyi/ruoyi-modules-system.jar
 # 启动系统服务
-ENTRYPOINT ["java","-jar","ruoyi-modules-system.jar"]
+#ENTRYPOINT ["java","-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005","-jar","ruoyi-modules-system.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 -jar ruoyi-modules-system.jar"]

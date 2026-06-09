@@ -2,11 +2,21 @@ package com.ruoyi.system.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.common.redis.service.RedisService;
+import com.ruoyi.common.security.annotation.RecordSql;
+import com.ruoyi.system.domain.vo.AsyncDataRecord;
 import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -37,7 +47,7 @@ import com.ruoyi.system.service.ISysUserService;
  * @author ruoyi
  */
 @Service
-public class SysUserServiceImpl implements ISysUserService
+public class SysUserServiceImpl extends ServiceImpl<SysUserMapper,SysUser> implements ISysUserService
 {
     private static final Logger log = LoggerFactory.getLogger(SysUserServiceImpl.class);
 
@@ -75,7 +85,17 @@ public class SysUserServiceImpl implements ISysUserService
     @DataScope(deptAlias = "d", userAlias = "u")
     public List<SysUser> selectUserList(SysUser user)
     {
-        return userMapper.selectUserList(user);
+        List<SysUser> sysUsers = userMapper.selectUserList(user);
+        sysUsers.forEach(item -> {
+            Long userId = item.getUserId();
+            List<SysRole> sysRoles = roleMapper.selectRolePermissionByUserId(userId);
+            item.setRoles(sysRoles);
+            // 查询岗位名称
+            List<SysPost> sysPosts = postMapper.selectPostsByUserId(userId);
+            String postName = sysPosts.stream().map(SysPost::getPostName).collect(Collectors.joining(","));
+            item.setPostName(postName);
+        });
+        return sysUsers;
     }
 
     /**
@@ -113,6 +133,7 @@ public class SysUserServiceImpl implements ISysUserService
     @Override
     public SysUser selectUserByUserName(String userName)
     {
+        SysUser user = userMapper.selectById(3);
         return userMapper.selectUserByUserName(userName);
     }
 
@@ -560,4 +581,25 @@ public class SysUserServiceImpl implements ISysUserService
         return successMsg.toString();
     }
 
+    @Override
+    @Async("taskExecutor")
+    public CompletableFuture<List<AsyncDataRecord>> queryLargeData(String queryParam, int recordCount) {
+        // 模拟耗时操作（如复杂查询、外部接口调用）
+        try {
+            // 假设查询需要 20 秒
+            log.info("任务线程："+Thread.currentThread().getName());
+            Thread.sleep(20000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // 模拟生成大量数据
+        List<AsyncDataRecord> result = new ArrayList<>();
+        for (long i = 0; i < recordCount; i++) {
+            AsyncDataRecord record = new AsyncDataRecord(i, "Name" + i, "Description for " + i);
+            result.add(record);
+        }
+        log.info("返回线程："+Thread.currentThread().getName());
+        return CompletableFuture.completedFuture(result);
+    }
 }

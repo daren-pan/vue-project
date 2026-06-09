@@ -1,22 +1,23 @@
 package com.ruoyi.system.controller;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import com.ruoyi.common.core.context.SecurityContextHolder;
+import com.ruoyi.common.redis.service.RedisService;
+import com.ruoyi.common.security.annotation.RecordSql;
+import com.ruoyi.system.domain.AsyncTask.TaskStore;
+import com.ruoyi.system.domain.vo.AsyncDataRecord;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.text.Convert;
@@ -52,6 +53,7 @@ import com.ruoyi.system.service.ISysUserService;
 @RequestMapping("/user")
 public class SysUserController extends BaseController
 {
+    private static final Logger log = LoggerFactory.getLogger(SysUserController.class);
     @Autowired
     private ISysUserService userService;
 
@@ -73,6 +75,9 @@ public class SysUserController extends BaseController
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private RedisService redisService;
+
     /**
      * 获取用户列表
      */
@@ -80,6 +85,7 @@ public class SysUserController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(SysUser user)
     {
+        log.info("开始查询人员");
         startPage();
         List<SysUser> list = userService.selectUserList(user);
         return getDataTable(list);
@@ -376,5 +382,53 @@ public class SysUserController extends BaseController
     public AjaxResult deptTree(SysDept dept)
     {
         return success(deptService.selectDeptTreeList(dept));
+    }
+
+    @Autowired
+    private TaskStore taskStore;
+    /**
+     * 大数据异步线程查询
+     */
+    @PostMapping("/queryLargeData")
+    public ResponseEntity<Map<String, String>> submitQuery(@RequestParam(defaultValue = "100000") int count) {
+        String taskId = UUID.randomUUID().toString();
+
+        // 存储初始状态
+        TaskStore.TaskStatus status = new TaskStore.TaskStatus();
+        status.setStatus("PROCESSING");
+        taskStore.put(taskId, status);
+        redisService.setCacheObject(taskId, status);
+
+        TaskStore.TaskStatus res = redisService.getCacheObject(taskId);
+        log.info("当前线程："+Thread.currentThread().getName());
+
+        // 异步执行查询
+        CompletableFuture<List<AsyncDataRecord>> future = userService.queryLargeData("src/test", count);
+
+        // 当异步任务完成时，更新存储中的状态
+        future.whenComplete((result, ex) -> {
+            if (ex == null) {
+                taskStore.updateStatus(taskId, "SUCCESS", result);
+            } else {
+                taskStore.updateStatus(taskId, "FAILED", ex.getMessage());
+            }
+        });
+
+        // 立即返回任务ID
+        Map<String, String> response = new HashMap<>();
+        response.put("taskId", taskId);
+        response.put("status", "PROCESSING");
+        log.info("当前线程："+Thread.currentThread().getName());
+        return ResponseEntity.accepted().body(response);
+    }
+
+    @GetMapping("/task/{taskId}")
+    public ResponseEntity<TaskStore.TaskStatus> getTaskStatus(@PathVariable String taskId) {
+//        TaskStore.TaskStatus status = taskStore.get(taskId);
+        TaskStore.TaskStatus status = redisService.getCacheObject(taskId);
+        if (status == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(status);
     }
 }

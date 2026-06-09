@@ -24,13 +24,20 @@ module.exports = {
   // 用于放置生成的静态资源 (js、css、img、fonts) 的；（项目打包之后，静态资源会放在这个文件夹下）
   assetsDir: 'static',
   // 如果你不需要生产环境的 source map，可以将其设置为 false 以加速生产环境构建。
-  productionSourceMap: false,
+  productionSourceMap: true,
   transpileDependencies: ['quill'],
   // webpack-dev-server 相关配置
-  devServer: {
+    devServer: {
     host: '0.0.0.0',
     port: port,
     open: true,
+    hot: true,
+    liveReload: true,
+    watchOptions: {
+      ignored: /node_modules/,
+      aggregateTimeout: 300,
+      poll: 1000
+    },
     proxy: {
       // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
@@ -52,6 +59,7 @@ module.exports = {
   },
   configureWebpack: {
     name: name,
+    devtool: 'source-map',
     resolve: {
       alias: {
         '@': resolve('src')

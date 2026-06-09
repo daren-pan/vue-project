@@ -38,8 +38,16 @@ nbdist/
 ######################################################################
 # Others
 *.log
+*.log.*
 *.xml.versionsBackup
 *.swp
+
+# Jars & runtime
+*.jar
+docker/**/logs/
+docker/**/data/
+docker/skywalking/
+logs/
 
 !*/build/*.java
 !*/build/*.html

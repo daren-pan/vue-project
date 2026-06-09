@@ -1,0 +1,38 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ruoyi-ingress
+  namespace: ruoyi
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # 前端
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ruoyi-nginx
+                port:
+                  number: 80
+          # Nacos 控制台
+          - path: /nacos
+            pathType: Prefix
+            backend:
+              service:
+                name: ruoyi-nacos
+                port:
+                  number: 8848
+          # Kibana
+          - path: /kibana
+            pathType: Prefix
+            backend:
+              service:
+                name: kibana
+                port:
+                  number: 5601

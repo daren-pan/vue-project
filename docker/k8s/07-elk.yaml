@@ -1,0 +1,371 @@
+---
+# Elasticsearch Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-elk
+  namespace: ruoyi
+
+spec:
+  ports:
+    - port: 9200
+      targetPort: 9200
+      name: http
+    - port: 9300
+      targetPort: 9300
+      name: transport
+  selector:
+    app: elasticsearch-elk
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch-elk
+  namespace: ruoyi
+spec:
+  serviceName: elasticsearch-elk
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch-elk
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-elk
+    spec:
+      containers:
+        - name: elasticsearch
+          image: elasticsearch:7.17.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          env:
+            - name: discovery.type
+              value: "single-node"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          volumeMounts:
+            - name: es-data
+              mountPath: /usr/share/elasticsearch/data
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: es-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+
+---
+# ==================== Logstash ====================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: ruoyi
+data:
+  logstash.conf: |
+    input {
+      tcp {
+        port => 4560
+        codec => json
+      }
+    }
+
+    filter {
+      mutate {
+        add_field => {
+          "service_name" => "%{[service_name]}"
+        }
+      }
+
+      date {
+        match => ["timestamp", "ISO8601"]
+        target => "@timestamp"
+        timezone => "Asia/Shanghai"
+      }
+
+      mutate {
+        remove_field => ["@version", "host", "port"]
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch-elk:9200"]
+        index => "ruoyi-logs-%{+YYYY.MM.dd}"
+      }
+    }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruoyi-logstash
+  namespace: ruoyi
+spec:
+  ports:
+    - port: 4560
+      targetPort: 4560
+      name: tcp
+    - port: 5044
+      targetPort: 5044
+      name: filebeat
+  selector:
+    app: logstash
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: ruoyi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+        - name: logstash
+          image: logstash:7.17.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4560
+              name: tcp
+            - containerPort: 5044
+              name: filebeat
+          volumeMounts:
+            - name: logstash-pipeline
+              mountPath: /usr/share/logstash/pipeline/logstash.conf
+              subPath: logstash.conf
+          env:
+            - name: LS_JAVA_OPTS
+              value: "-Xms256m -Xmx256m"
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+      volumes:
+        - name: logstash-pipeline
+          configMap:
+            name: logstash-config
+
+---
+# ==================== Kibana ====================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-config
+  namespace: ruoyi
+data:
+  kibana.yml: |
+    server.host: "0.0.0.0"
+    server.basePath: "/kibana"
+    server.rewriteBasePath: true
+    elasticsearch.hosts: ["http://elasticsearch-elk:9200"]
+    monitoring.ui.container.elasticsearch.enabled: true
+    i18n.locale: "zh-CN"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: ruoyi
+spec:
+  ports:
+    - port: 15601
+      targetPort: 5601
+  selector:
+    app: kibana
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: ruoyi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: kibana:7.17.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5601
+          volumeMounts:
+            - name: kibana-config
+              mountPath: /usr/share/kibana/config/kibana.yml
+              subPath: kibana.yml
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+      volumes:
+        - name: kibana-config
+          configMap:
+            name: kibana-config
+
+---
+# ==================== Filebeat (DaemonSet) ====================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: ruoyi
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+    - type: container
+      enabled: true
+      paths:
+        - /var/log/containers/*.log
+      json.message_key: log
+      json.keys_under_root: true
+      json.add_error_key: true
+
+    processors:
+      - add_docker_metadata:
+          host: "true"
+      - decode_json_fields:
+          fields: ["message"]
+          target: ""
+          overwrite_keys: true
+      - timestamp:
+          field: "@timestamp"
+          layouts:
+            - "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            - "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            - "yyyy-MM-dd HH:mm:ss"
+
+    output.logstash:
+      hosts: ["ruoyi-logstash:5044"]
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: ruoyi
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      serviceAccountName: filebeat
+      containers:
+        - name: filebeat
+          image: elastic/filebeat:7.17.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-c"
+            - "/etc/filebeat.yml"
+            - "-e"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/filebeat.yml
+              subPath: filebeat.yml
+            - name: varlog
+              mountPath: /var/log/containers
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: varrunlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+      volumes:
+        - name: config
+          configMap:
+            name: filebeat-config
+        - name: varlog
+          hostPath:
+            path: /var/log/containers
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: varrunlogpods
+          hostPath:
+            path: /var/log/pods
+
+---
+# ==================== ServiceAccount for Filebeat ====================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+  namespace: ruoyi
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat
+subjects:
+  - kind: ServiceAccount
+    name: filebeat
+    namespace: ruoyi
+roleRef:
+  kind: ClusterRole
+  name: filebeat
+  apiGroup: rbac.authorization.k8s.io
+

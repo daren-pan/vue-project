@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.workflow.WfProcessInstanceMapper">
+
+    <resultMap type="com.ruoyi.system.domain.workflow.WfProcessInstance" id="WfProcessInstanceResult">
+        <id property="id" column="id"/>
+        <result property="processDefId" column="process_def_id"/>
+        <result property="processDefVersion" column="process_def_version"/>
+        <result property="businessKey" column="business_key"/>
+        <result property="businessTable" column="business_table"/>
+        <result property="businessId" column="business_id"/>
+        <result property="applicant" column="applicant"/>
+        <result property="status" column="status"/>
+        <result property="currentNodeId" column="current_node_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        SELECT id, process_def_id, process_def_version, business_key, business_table, business_id,
+               applicant, status, current_node_id, start_time, end_time, create_by, create_time, update_by, update_time, remark
+        FROM wf_process_instance
+    </sql>
+
+    <select id="selectWfProcessInstanceById" parameterType="Long" resultMap="WfProcessInstanceResult">
+        <include refid="selectVo"/> WHERE id = #{id}
+    </select>
+
+    <select id="selectByBusiness" resultMap="WfProcessInstanceResult">
+        <include refid="selectVo"/> WHERE business_table = #{businessTable} AND business_id = #{businessId}
+    </select>
+
+    <select id="selectWfProcessInstanceList" parameterType="com.ruoyi.system.domain.workflow.WfProcessInstance" resultMap="WfProcessInstanceResult">
+        <include refid="selectVo"/>
+        <where>
+            <if test="applicant != null and applicant != ''">AND applicant LIKE CONCAT('%', #{applicant}, '%')</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insertWfProcessInstance" parameterType="com.ruoyi.system.domain.workflow.WfProcessInstance" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO wf_process_instance(process_def_id, process_def_version, business_key, business_table, business_id,
+            applicant, status, current_node_id, start_time, create_by, create_time, remark)
+        VALUES (#{processDefId}, #{processDefVersion}, #{businessKey}, #{businessTable}, #{businessId},
+            #{applicant}, #{status}, #{currentNodeId}, SYSDATE(), #{createBy}, SYSDATE(), #{remark})
+    </insert>
+
+    <update id="updateWfProcessInstance" parameterType="com.ruoyi.system.domain.workflow.WfProcessInstance">
+        UPDATE wf_process_instance
+        SET status = #{status}, current_node_id = #{currentNodeId}, end_time = #{endTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteWfProcessInstanceById" parameterType="Long">
+        DELETE FROM wf_process_instance WHERE id = #{id}
+    </delete>
+
+</mapper>

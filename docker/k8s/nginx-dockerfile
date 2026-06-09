@@ -1,0 +1,3 @@
+FROM nginx:latest
+COPY ./nginx/html/dist /home/ruoyi/projects/ruoyi-ui
+COPY ./nginx/conf/nginx.conf /etc/nginx/nginx.conf

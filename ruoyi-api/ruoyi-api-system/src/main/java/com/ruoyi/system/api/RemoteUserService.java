@@ -1,6 +1,7 @@
 package com.ruoyi.system.api;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,8 @@ import com.ruoyi.common.core.domain.R;
 import com.ruoyi.system.api.domain.SysUser;
 import com.ruoyi.system.api.factory.RemoteUserFallbackFactory;
 import com.ruoyi.system.api.model.LoginUser;
+
+import java.util.Map;
 
 /**
  * 用户服务
@@ -51,4 +54,12 @@ public interface RemoteUserService
      */
     @PutMapping("/user/recordlogin")
     public R<Boolean> recordUserLogin(@RequestBody SysUser sysUser, @RequestHeader(SecurityConstants.FROM_SOURCE) String source);
+
+    /**
+     * 定时任务异步处理
+     *
+     * @return 结果
+     */
+    @GetMapping("/user/queryLargeData")
+    public ResponseEntity<Map<String, String>> queryLargeData(int count);
 }
