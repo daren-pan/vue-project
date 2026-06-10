@@ -1,0 +1,188 @@
+# Jenkins Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: ruoyi
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+    - port: 50000
+      targetPort: 50000
+      name: agent
+  selector:
+    app: jenkins
+---
+# Jenkins PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-data
+  namespace: ruoyi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Build cache PVC (Maven .m2 + npm cache)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: build-cache
+  namespace: ruoyi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Jenkins Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: ruoyi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      serviceAccountName: jenkins
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        # 复制 docker CLI 到共享卷
+        - name: copy-docker
+          image: m.daocloud.io/docker.io/docker:cli
+          command: ["sh", "-c", "cp /usr/local/bin/docker /tools/"]
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
+        # 复制 kubectl 到共享卷
+        - name: copy-kubectl
+          image: m.daocloud.io/docker.io/bitnami/kubectl:latest
+          command: ["sh", "-c", "cp /opt/bitnami/kubectl/bin/kubectl /tools/"]
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
+      containers:
+        # Docker-in-Docker sidecar
+        - name: dind
+          image: docker:dind
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          ports:
+            - containerPort: 2375
+              name: docker
+          volumeMounts:
+            - name: docker-storage
+              mountPath: /var/lib/docker
+            - name: workspace
+              mountPath: /workspace
+            - name: build-cache
+              mountPath: /cache
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+        # Jenkins master
+        - name: jenkins
+          image: jenkins/jenkins:lts-jdk17
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 50000
+              name: agent
+          env:
+            - name: JAVA_OPTS
+              value: "-Djenkins.install.runSetupWizard=false -Dhudson.security.csrf.DefaultCrumbIssuer.EXCLUDE_SESSION_ID=true"
+            - name: JENKINS_OPTS
+              value: "--prefix=/jenkins"
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+            - name: PATH
+              value: "/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/tools"
+          volumeMounts:
+            - name: jenkins-data
+              mountPath: /var/jenkins_home
+            - name: tools
+              mountPath: /tools
+            - name: workspace
+              mountPath: /workspace
+            - name: build-cache
+              mountPath: /cache
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+      volumes:
+        - name: jenkins-data
+          persistentVolumeClaim:
+            claimName: jenkins-data
+        - name: docker-storage
+          emptyDir: {}
+        - name: tools
+          emptyDir: {}
+        - name: workspace
+          emptyDir: {}
+        - name: build-cache
+          persistentVolumeClaim:
+            claimName: build-cache
+---
+# RBAC: allow Jenkins to manage deployments
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: ruoyi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "persistentvolumeclaims", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins
+subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: ruoyi

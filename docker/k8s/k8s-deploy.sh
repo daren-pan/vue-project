@@ -6,11 +6,12 @@
 NAMESPACE="ruoyi"
 
 usage() {
-	echo "Usage: sh k8s-deploy.sh [base|modules|elk|all|stop|rm]"
+	echo "Usage: sh k8s-deploy.sh [base|modules|elk|jenkins|all|stop|rm]"
 	echo ""
 	echo "  base    - 启动基础中间件 (MySQL, Redis, Nacos)"
 	echo "  modules - 启动业务模块 (Gateway, Auth, System, Gen, Job, Nginx)"
 	echo "  elk     - 启动 ELK 日志系统 (Elasticsearch, Logstash, Kibana, Filebeat)"
+	echo "  jenkins - 启动 Jenkins CI/CD"
 	echo "  all     - 启动全部"
 	echo "  stop    - 停止所有 Deployment（将副本数置零）"
 	echo "  rm      - 删除所有资源"
@@ -56,11 +57,29 @@ elk(){
 	echo "Kibana 访问地址: http://localhost:15601"
 }
 
+# 启动 Jenkins
+jenkins(){
+	echo "=== 部署 Jenkins ==="
+	kubectl apply -f docker/k8s/09-jenkins.yaml
+	kubectl apply -f docker/k8s/08-ingress.yaml
+	echo "等待 Jenkins 就绪..."
+	kubectl rollout status deployment jenkins -n $NAMESPACE
+	# 获取初始密码
+	sleep 10
+	JENKINS_POD=$(kubectl get pod -n $NAMESPACE -l app=jenkins -o jsonpath="{.items[0].metadata.name}")
+	INIT_PWD=$(kubectl exec -n $NAMESPACE $JENKINS_POD -- cat /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null)
+	echo ""
+	echo "=== Jenkins 访问信息 ==="
+	echo "地址: http://localhost:8880/jenkins"
+	echo "初始密码: $INIT_PWD"
+}
+
 # 启动全部
 all(){
 	base
 	modules
 	elk
+	jenkins
 	echo ""
 	echo "=== 全部部署完成 ==="
 	echo "前端:    http://localhost:30080"
@@ -79,6 +98,7 @@ stop(){
 # 删除所有资源
 rm(){
 	echo "=== 删除所有资源 ==="
+	kubectl delete -f docker/k8s/09-jenkins.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/07-elk.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/06-nginx.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/05-microservices.yaml --ignore-not-found
@@ -98,6 +118,9 @@ case "$1" in
 ;;
 "elk")
 	elk
+;;
+"jenkins")
+	jenkins
 ;;
 "all")
 	all

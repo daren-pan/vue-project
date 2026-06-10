@@ -28,6 +28,14 @@ spec:
                 name: ruoyi-nacos
                 port:
                   number: 8848
+          # Jenkins
+          - path: /jenkins
+            pathType: Prefix
+            backend:
+              service:
+                name: jenkins
+                port:
+                  number: 8080
           # Kibana
           - path: /kibana
             pathType: Prefix
