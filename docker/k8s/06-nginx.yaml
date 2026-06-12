@@ -78,9 +78,11 @@ spec:
       labels:
         app: ruoyi-nginx
     spec:
+      imagePullSecrets:
+        - name: acr-auth
       containers:
         - name: nginx
-          image: ruoyi-nginx:latest
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-nginx:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80

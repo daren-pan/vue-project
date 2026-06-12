@@ -9,7 +9,7 @@ data:
   application.properties: |
     spring.datasource.platform=mysql
     db.num=1
-    db.url.0=jdbc:mysql://ruoyi-mysql:3306/ry-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+    db.url.0=jdbc:mysql://ruoyi-mysql:3308/ry-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
     db.user=root
     db.password=password
 
@@ -104,10 +104,10 @@ spec:
               mountPath: /home/nacos/logs
           resources:
             limits:
-              memory: "1Gi"
+              memory: "2Gi"
               cpu: "1000m"
             requests:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: "500m"
       volumes:
         - name: nacos-config

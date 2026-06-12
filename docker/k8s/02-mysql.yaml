@@ -38,11 +38,11 @@ metadata:
   namespace: ruoyi
 spec:
   ports:
-    - port: 3306
+    - port: 3308
       targetPort: 3306
   selector:
     app: ruoyi-mysql
-  type: ClusterIP
+  type: LoadBalancer
 
 ---
 # MySQL StatefulSet

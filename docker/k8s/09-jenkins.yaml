@@ -93,6 +93,7 @@ spec:
         # Docker-in-Docker sidecar
         - name: dind
           image: docker:dind
+          args: ["--registry-mirror=https://docker.m.daocloud.io"]
           securityContext:
             privileged: true
           env:
