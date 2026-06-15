@@ -1,0 +1,68 @@
+{{- /*
+微服务 — Service + Deployment（6 个服务循环生成）
+原文件: docker/k8s/05-microservices.yaml
+*/ -}}
+{{- range $key, $svc := .Values.microservices }}
+---
+# ==================== {{ $svc.deployName }} ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.deployName }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+  selector:
+    app: {{ $svc.deployName }}
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.deployName }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $svc.deployName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.deployName }}
+    spec:
+      imagePullSecrets:
+        - name: acr-auth
+      initContainers:
+        - name: wait-for-nacos
+          image: {{ $.Values.image.registry }}/{{ $svc.deployName }}:{{ $.Values.imageTag }}
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q -O /dev/null http://ruoyi-nacos:8848/nacos/; do
+                echo "Waiting for Nacos..."
+                sleep 3
+              done
+              echo "Nacos is ready!"
+      containers:
+        - name: {{ $key }}
+          image: {{ $.Values.image.registry }}/{{ $svc.deployName }}:{{ $.Values.imageTag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ $svc.port }}
+          env:
+            {{- range $k, $v := $svc.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- if $svc.javaOpts }}
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ $svc.javaOpts | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+{{- end }}
