@@ -12,14 +12,6 @@ spec:
   rules:
     - http:
         paths:
-          # 前端
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ruoyi-nginx
-                port:
-                  number: 80
           # Nacos 控制台
           - path: /nacos
             pathType: Prefix
@@ -44,3 +36,11 @@ spec:
                 name: kibana
                 port:
                   number: 5601
+          # 前端（/ 放最后，否则拦截所有请求）
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ruoyi-nginx
+                port:
+                  number: 80

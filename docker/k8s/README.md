@@ -14,6 +14,7 @@ GitHub (springboot3) → Jenkins (K8s) → ACR 镜像仓库 → K8s 集群
 | MySQL | ruoyi-mysql:3308 | LoadBalancer |
 | Nacos | ruoyi-nacos:8848 | 注册中心 & 配置中心 |
 | Redis | ruoyi-redis:6379 | 缓存 |
+| Nexus | ruoyi-nexus:8081 | Maven 私服，缓存依赖 |
 
 ---
 
@@ -119,6 +120,11 @@ cp -r /var/jenkins_home/workspace/RuoYi-Cloud/. /workspace/
 cd /workspace
 git config --global --add safe.directory /workspace
 
+# 生成唯一镜像标签：版本号-构建号-Git短哈希
+GIT_HASH=$(git rev-parse --short HEAD)
+UNIQUE_TAG="3.6.7-b${BUILD_NUMBER}-${GIT_HASH}"
+echo "  镜像标签: ${UNIQUE_TAG}"
+
 OLD=$(git rev-parse HEAD~1 2>/dev/null || echo "")
 if [ -n "$OLD" ]; then
   DIFF=$(git diff --name-only $OLD HEAD 2>/dev/null || echo ALL)
@@ -150,7 +156,7 @@ M_PID=""
 if [ -n "$M" ]; then
   echo "  [后端] Maven 编译: ${M#,}"
   docker run --rm -v /cache/m2:/root/.m2 -v /workspace:/workspace -w /workspace \
-    maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests -pl ${M#,} -am &
+    maven:3.9-eclipse-temurin-17 mvn -s docker/k8s/settings-nexus.xml clean package -DskipTests -pl ${M#,} -am &
   M_PID=$!
 else
   echo "  [后端] 无变更，跳过 Maven"
@@ -159,7 +165,7 @@ fi
 if [ $B_UI -gt 0 ]; then
   echo "  [前端] npm 编译 + 构建镜像..."
   docker run --rm -v /cache/npm:/root/.npm -v /workspace/ruoyi-ui:/app -w /app \
-    node:18-alpine sh -c "npm install && npm run build:prod"
+    node:18-alpine sh -c "npm install --registry=http://ruoyi-nexus:8081/nexus/repository/npm-public/ && npm run build:prod"
   echo "  [前端] 编译完成"
 else
   echo "  [前端] 无变更，跳过"
@@ -176,11 +182,15 @@ echo "[4/5] 构建 & 部署..."
 bd() {
   echo "  [${1}] 打包镜像..."
   cp $2/target/*.jar docker/ruoyi/$3/jar/ 2>/dev/null || true
-  docker build -t $REG/$1:3.6.7 -f docker/ruoyi/$3/dockerfile docker/ruoyi/$3
-  echo "  [${1}] 推送 ACR..."
+  docker build \
+    -t $REG/$1:${UNIQUE_TAG} \
+    -t $REG/$1:3.6.7 \
+    -f docker/ruoyi/$3/dockerfile docker/ruoyi/$3
+  echo "  [${1}] 推送 ACR（唯一标签: ${UNIQUE_TAG}）..."
+  docker push $REG/$1:${UNIQUE_TAG}
   docker push $REG/$1:3.6.7
-  echo "  [${1}] 滚动更新..."
-  kubectl rollout restart deploy/$1 -n ruoyi
+  echo "  [${1}] 滚动更新（set image → ${UNIQUE_TAG}）..."
+  kubectl set image deploy/$1 ${1#ruoyi-}=$REG/$1:${UNIQUE_TAG} -n ruoyi
   kubectl rollout status deploy/$1 -n ruoyi --timeout=120s
   echo "  [${1}] ✅ 完成"
 }
@@ -190,11 +200,15 @@ if [ $B_UI -gt 0 ]; then
   mkdir -p docker/nginx/html
   rm -rf docker/nginx/html/dist
   cp -r ruoyi-ui/dist docker/nginx/html/dist
-  docker build --no-cache -t $REG/ruoyi-nginx:latest -f docker/nginx/dockerfile docker/nginx
-  echo "  [nginx] 推送 ACR..."
+  docker build --no-cache \
+    -t $REG/ruoyi-nginx:${UNIQUE_TAG} \
+    -t $REG/ruoyi-nginx:latest \
+    -f docker/nginx/dockerfile docker/nginx
+  echo "  [nginx] 推送 ACR（唯一标签: ${UNIQUE_TAG}）..."
+  docker push $REG/ruoyi-nginx:${UNIQUE_TAG}
   docker push $REG/ruoyi-nginx:latest
-  echo "  [nginx] 滚动更新..."
-  kubectl rollout restart deploy/ruoyi-nginx -n ruoyi
+  echo "  [nginx] 滚动更新（set image → ${UNIQUE_TAG}）..."
+  kubectl set image deploy/ruoyi-nginx nginx=$REG/ruoyi-nginx:${UNIQUE_TAG} -n ruoyi
   kubectl rollout status deploy/ruoyi-nginx -n ruoyi --timeout=120s
   echo "  [nginx] ✅ 完成"
 fi
@@ -233,25 +247,74 @@ echo "========================================="
 
 ---
 
-## 四、流水线说明
+## 四、Nexus Maven 私服（推荐）
 
-### 4.1 执行流程
+部署 Nexus 后 Maven 依赖只需下载一次，后续构建从内网缓存获取。
+
+### 4.1 部署
+
+```bash
+# 部署 Nexus
+sh docker/k8s/k8s-deploy.sh nexus
+
+# 获取初始密码
+kubectl exec deploy/ruoyi-nexus -n ruoyi -- cat /nexus-data/admin.password
+```
+
+### 4.2 首次配置
+
+1. 浏览器打开 `http://localhost:30081`
+2. 用初始密码登录（用户 admin）
+3. 按向导设置新密码为 `admin123`（与 `settings-nexus.xml` 一致）
+4. 点击齿轮图标 → **Repository** → **Create repository**
+5. 选择 **maven2 (proxy)**，创建以下代理仓库：
+
+| 仓库名 | 代理地址 |
+|--------|---------|
+| `aliyun-public` | `https://maven.aliyun.com/repository/public` |
+| `maven-central` | `https://repo1.maven.org/maven2/` |
+
+6. 创建 **maven2 (group)**，命名为 `maven-public`，将上面两个代理仓库加入
+
+### 4.3 生效方式
+
+Jenkins 构建脚本已自动通过 `-s docker/k8s/settings-nexus.xml` 走 Nexus，无需额外操作。
+
+---
+
+## 五、流水线说明
+
+### 5.1 执行流程
 
 ```
 [1/5] 登录 ACR
    ↓
-[2/5] 准备代码（从 Jenkins workspace 复制 + 增量检测）
+[2/5] 准备代码（从 Jenkins workspace 复制 + 增量检测 + 生成唯一标签）
    ↓
 [3/5] 并行编译
    ├── Maven（auth / gateway / system）
    └── npm（ruoyi-ui）
    ↓
-[4/5] 构建镜像 → 推送 ACR → kubectl rollout restart
+[4/5] 构建镜像 → 推送双标签 → kubectl set image（滚动更新）
    ↓
 [5/5] 健康检查
 ```
 
-### 4.2 增量构建
+### 5.2 镜像标签策略
+
+每次构建产出一个**唯一标签**（用于回滚追溯）和一个**滚动标签**（用于自动部署）：
+
+```
+3.6.7-b42-abc1234          ← 唯一标签（保留历史）
+3.6.7                      ← 滚动标签（始终指向最新成功构建）
+```
+
+| 标签 | 格式 | 用途 |
+|------|------|------|
+| 唯一标签 | `3.6.7-b${BUILD_NUMBER}-${GIT_HASH}` | 永久保留，快速回滚到任意历史版本 |
+| 滚动标签 | `3.6.7` | K8s 部署目标，始终拉最新版 |
+
+### 5.3 增量构建
 
 脚本通过 `git diff HEAD~1 HEAD` 检测变更文件，只编译受影响的模块：
 
@@ -262,7 +325,7 @@ echo "========================================="
 | `ruoyi-gateway/**` 或 `ruoyi-common/**` | Maven(gateway) + gateway 镜像 |
 | `ruoyi-modules/ruoyi-system/**` | Maven(system) + system 镜像 |
 
-### 4.3 构建耗时
+### 5.4 构建耗时
 
 | 场景 | 耗时 |
 |---|---|
@@ -272,7 +335,7 @@ echo "========================================="
 
 ---
 
-## 五、K8s 资源清单
+## 六、K8s 资源清单
 
 | 文件 | 内容 | 部署顺序 |
 |---|---|---|
@@ -281,6 +344,7 @@ echo "========================================="
 | `02-mysql.yaml` | MySQL 数据库 | ③ |
 | `03-redis.yaml` | Redis 缓存 | ③ |
 | `04-nacos.yaml` | Nacos 注册配置中心 | ④ |
+| `10-nexus.yaml` | Nexus Maven 私服 | ④ |
 | `05-microservices.yaml` | 微服务（gateway/auth/system/gen/job/file） | ⑤ |
 | `06-nginx.yaml` | 前端 Nginx | ⑤ |
 | `07-monitor.yaml` | 监控（可选） | ⑥ |
@@ -289,7 +353,7 @@ echo "========================================="
 
 ---
 
-## 六、常用命令
+## 七、常用命令
 
 ```bash
 # 查看所有 Pod

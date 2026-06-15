@@ -6,9 +6,10 @@
 NAMESPACE="ruoyi"
 
 usage() {
-	echo "Usage: sh k8s-deploy.sh [base|modules|elk|jenkins|all|stop|rm]"
+	echo "Usage: sh k8s-deploy.sh [base|nexus|modules|elk|jenkins|all|stop|rm]"
 	echo ""
 	echo "  base    - 启动基础中间件 (MySQL, Redis, Nacos)"
+	echo "  nexus   - 启动 Maven 私服 (Nexus)"
 	echo "  modules - 启动业务模块 (Gateway, Auth, System, Gen, Job, Nginx)"
 	echo "  elk     - 启动 ELK 日志系统 (Elasticsearch, Logstash, Kibana, Filebeat)"
 	echo "  jenkins - 启动 Jenkins CI/CD"
@@ -74,14 +75,34 @@ jenkins(){
 	echo "初始密码: $INIT_PWD"
 }
 
+# 启动 Nexus Maven 私服
+nexus(){
+	echo "=== 部署 Nexus Maven 私服 ==="
+	kubectl apply -f docker/k8s/10-nexus.yaml
+	echo "等待 Nexus 就绪（首次启动需 1-2 分钟）..."
+	kubectl rollout status deployment ruoyi-nexus -n $NAMESPACE --timeout=180s
+	echo ""
+	echo "Nexus 部署完成！"
+	echo "  初始化密码："
+	kubectl exec deploy/ruoyi-nexus -n $NAMESPACE -- cat /nexus-data/admin.password 2>/dev/null || echo "  （请稍等片刻后手动查看）"
+	echo ""
+	echo "  后续配置步骤:"
+	echo "    1. 浏览器打开 http://localhost:30081"
+	echo "    2. 用上面的密码登录（用户 admin）"
+	echo "    3. 设置新密码为 admin123"
+	echo "    4. 创建 maven-public 仓库组"
+}
+
 # 启动全部
 all(){
 	base
+	nexus
 	modules
 	elk
 	jenkins
 	echo ""
 	echo "=== 全部部署完成 ==="
+	echo "Nexus:   http://localhost:30081"
 	echo "前端:    http://localhost:30080"
 	echo "Nacos:   http://localhost:8848/nacos"
 	echo "Kibana:  http://localhost:15601"
@@ -98,6 +119,7 @@ stop(){
 # 删除所有资源
 rm(){
 	echo "=== 删除所有资源 ==="
+	kubectl delete -f docker/k8s/10-nexus.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/09-jenkins.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/07-elk.yaml --ignore-not-found
 	kubectl delete -f docker/k8s/06-nginx.yaml --ignore-not-found
@@ -112,6 +134,9 @@ rm(){
 case "$1" in
 "base")
 	base
+;;
+"nexus")
+	nexus
 ;;
 "modules")
 	modules
