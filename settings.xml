@@ -2,37 +2,103 @@
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
-
-    <!--
-        Nexus Maven 私服配置
-        用法：mvn -s docker/k8s/settings-nexus.xml clean package
-    -->
-
-    <!-- 本地仓库路径（PVC 持久化缓存） -->
-    <localRepository>/cache/m2</localRepository>
-
-    <!-- 阿里云镜像：下载依赖加速 -->
     <mirrors>
         <mirror>
-            <id>aliyun</id>
-            <name>Aliyun Maven Mirror</name>
+            <id>mirror</id>
+            <mirrorOf>central,jcenter,!repo-jbspy</mirrorOf>
+            <name>mirror</name>
             <url>https://maven.aliyun.com/nexus/content/groups/public</url>
-            <mirrorOf>central,jcenter</mirrorOf>
         </mirror>
     </mirrors>
-
-    <!-- 阿里云云效 Packages 凭据 -->
     <servers>
         <server>
             <id>repo-jbspy</id>
             <username>6a30f9c3c52e4f7643285575</username>
             <password>]sIXO)A2oT4k</password>
         </server>
-        <server>
-            <id>repo-ykcyv</id>
-            <username>6a30f9c3c52e4f7643285575</username>
-            <password>]sIXO)A2oT4k</password>
-        </server>
     </servers>
-
+    <profiles>
+        <profile>
+            <id>rdc</id>
+            <properties>
+                
+                <altReleaseDeploymentRepository>
+                    repo-jbspy::default::https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy
+                </altReleaseDeploymentRepository>
+                
+                
+                <altSnapshotDeploymentRepository>
+                    repo-jbspy::default::https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy
+                </altSnapshotDeploymentRepository>
+                
+            </properties>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>snapshots</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>repo-jbspy</id>
+                    <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>snapshots</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>repo-jbspy</id>
+                    <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>rdc</activeProfile>
+    </activeProfiles>
 </settings>
