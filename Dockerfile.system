@@ -3,6 +3,9 @@ WORKDIR /workspace
 COPY pom.xml settings.xml ./
 COPY ruoyi-common ./ruoyi-common
 COPY ruoyi-api ./ruoyi-api
+COPY ruoyi-auth ./ruoyi-auth
+COPY ruoyi-gateway ./ruoyi-gateway
+COPY ruoyi-visual ./ruoyi-visual
 COPY ruoyi-modules ./ruoyi-modules
 RUN mvn -s settings.xml clean package -DskipTests -pl ruoyi-modules/ruoyi-system -am
 
