@@ -11,6 +11,8 @@ COPY ruoyi-common/ruoyi-common-log/pom.xml ./ruoyi-common/ruoyi-common-log/
 COPY ruoyi-common/ruoyi-common-redis/pom.xml ./ruoyi-common/ruoyi-common-redis/
 COPY ruoyi-common/ruoyi-common-security/pom.xml ./ruoyi-common/ruoyi-common-security/
 COPY ruoyi-common/ruoyi-common-swagger/pom.xml ./ruoyi-common/ruoyi-common-swagger/
+COPY ruoyi-common/ruoyi-common-seata/pom.xml ./ruoyi-common/ruoyi-common-seata/
+COPY ruoyi-common/ruoyi-common-sensitive/pom.xml ./ruoyi-common/ruoyi-common-sensitive/
 COPY ruoyi-api/pom.xml ./ruoyi-api/
 COPY ruoyi-api/ruoyi-api-system/pom.xml ./ruoyi-api/ruoyi-api-system/
 COPY ruoyi-auth/pom.xml ./ruoyi-auth/
@@ -19,6 +21,9 @@ COPY ruoyi-visual/pom.xml ./ruoyi-visual/
 COPY ruoyi-visual/ruoyi-monitor/pom.xml ./ruoyi-visual/ruoyi-monitor/
 COPY ruoyi-modules/pom.xml ./ruoyi-modules/
 COPY ruoyi-modules/ruoyi-system/pom.xml ./ruoyi-modules/ruoyi-system/
+COPY ruoyi-modules/ruoyi-gen/pom.xml ./ruoyi-modules/ruoyi-gen/
+COPY ruoyi-modules/ruoyi-job/pom.xml ./ruoyi-modules/ruoyi-job/
+COPY ruoyi-modules/ruoyi-file/pom.xml ./ruoyi-modules/ruoyi-file/
 RUN mvn -s settings.xml dependency:go-offline -pl ruoyi-modules/ruoyi-system -am -q
 
 # ② 复制源码，只编译（依赖已缓存，这步只需编译）
