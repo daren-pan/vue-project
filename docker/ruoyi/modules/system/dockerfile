@@ -1,17 +1,15 @@
-# 基础镜像
-FROM  eclipse-temurin:17-jre
-# author
-MAINTAINER ruoyi
-MAINTAINER ruoyi2
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /workspace
+COPY pom.xml settings.xml ./
+COPY ruoyi-common ./ruoyi-common
+COPY ruoyi-api ./ruoyi-api
+COPY ruoyi-modules ./ruoyi-modules
+RUN mvn -s settings.xml clean package -DskipTests -pl ruoyi-modules/ruoyi-system -am
 
-# 挂载目录
+FROM eclipse-temurin:17-jre
+MAINTAINER ruoyi
 VOLUME /home/ruoyi
-# 创建目录
 RUN mkdir -p /home/ruoyi
-# 指定路径
 WORKDIR /home/ruoyi
-# 复制jar文件到路径
-COPY ./jar/ruoyi-modules-system.jar /home/ruoyi/ruoyi-modules-system.jar
-# 启动系统服务
-#ENTRYPOINT ["java","-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005","-jar","ruoyi-modules-system.jar"]
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 -jar ruoyi-modules-system.jar"]
+COPY --from=builder /workspace/ruoyi-modules/ruoyi-system/target/ruoyi-modules-system.jar /home/ruoyi/ruoyi-modules-system.jar
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar ruoyi-modules-system.jar"]
