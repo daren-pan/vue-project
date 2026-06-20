@@ -50,6 +50,14 @@ public interface SysPostMapper
     public List<SysPost> selectPostsByUserName(String userName);
 
     /**
+     * 根据用户ID查询岗位列表
+     *
+     * @param userId 用户ID
+     * @return 岗位列表
+     */
+    public List<SysPost> selectPostsByUserId(Long userId);
+
+    /**
      * 删除岗位信息
      * 
      * @param postId 岗位ID

@@ -167,7 +167,6 @@ hljs.registerLanguage("xml", require("highlight.js/lib/languages/xml"))
 hljs.registerLanguage("html", require("highlight.js/lib/languages/xml"))
 hljs.registerLanguage("vue", require("highlight.js/lib/languages/xml"))
 hljs.registerLanguage("javascript", require("highlight.js/lib/languages/javascript"))
-hljs.registerLanguage("typescript", require("highlight.js/lib/languages/typescript"))
 hljs.registerLanguage("sql", require("highlight.js/lib/languages/sql"))
 
 export default {
@@ -249,7 +248,7 @@ export default {
         this.$modal.msgError("请选择要生成的数据")
         return
       }
-      if (row.genType === "1") {
+      if(row.genType === "1") {
         genCode(row.tableName).then(() => {
           this.$modal.msgSuccess("成功生成到自定义路径：" + row.genPath)
         })

@@ -1,7 +1,6 @@
 package com.ruoyi.system.controller;
 
 import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -110,20 +109,6 @@ public class SysDeptController extends BaseController
         }
         dept.setUpdateBy(SecurityUtils.getUsername());
         return toAjax(deptService.updateDept(dept));
-    }
-
-    /**
-     * 保存部门排序
-     */
-    @RequiresPermissions("system:dept:edit")
-    @Log(title = "保存部门排序", businessType = BusinessType.UPDATE)
-    @PutMapping("/updateSort")
-    public AjaxResult updateSort(@RequestBody Map<String, String> params)
-    {
-        String[] deptIds = params.get("deptIds").split(",");
-        String[] orderNums = params.get("orderNums").split(",");
-        deptService.updateDeptSort(deptIds, orderNums);
-        return success();
     }
 
     /**

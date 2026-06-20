@@ -1,7 +1,5 @@
-import store from '@/store'
 import router from '@/router'
-import cache from '@/plugins/cache'
-import { MessageBox } from 'element-ui'
+import { MessageBox, } from 'element-ui'
 import { login, logout, getInfo, refreshToken } from '@/api/login'
 import { getToken, setToken, setExpiresIn, removeToken } from '@/utils/auth'
 import { isEmpty } from "@/utils/validate"
@@ -59,7 +57,6 @@ const user = {
           commit('SET_TOKEN', data.access_token)
           setExpiresIn(data.expires_in)
           commit('SET_EXPIRES_IN', data.expires_in)
-          store.dispatch('lock/unlockScreen')
           resolve()
         }).catch(error => {
           reject(error)
@@ -83,7 +80,6 @@ const user = {
           commit('SET_NAME', user.userName)
           commit('SET_NICK_NAME', user.nickName)
           commit('SET_AVATAR', avatar)
-          cache.session.set('pwrChrtype', res.pwdChrtype)
           /* 初始密码提示 */
           if(res.isDefaultModifyPwd) {
             MessageBox.confirm('您的密码还是初始密码，请修改密码！',  '安全提示', {  confirmButtonText: '确定',  cancelButtonText: '取消',  type: 'warning' }).then(() => {

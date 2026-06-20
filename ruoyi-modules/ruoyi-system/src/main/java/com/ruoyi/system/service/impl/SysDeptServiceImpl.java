@@ -1,12 +1,20 @@
 package com.ruoyi.system.service.impl;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import com.ruoyi.common.redis.service.RedisService;
+import com.ruoyi.common.security.annotation.RecordSql;
+import com.ruoyi.system.controller.SysUserController;
+import com.ruoyi.system.domain.AsyncTask.TaskStore;
+import com.ruoyi.system.domain.vo.AsyncDataRecord;
+import com.ruoyi.system.service.ISysUserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.core.constant.UserConstants;
 import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.text.Convert;
@@ -29,6 +37,7 @@ import com.ruoyi.system.service.ISysDeptService;
 @Service
 public class SysDeptServiceImpl implements ISysDeptService
 {
+    private static final Logger log = LoggerFactory.getLogger(SysDeptServiceImpl.class);
     @Autowired
     private SysDeptMapper deptMapper;
 
@@ -278,32 +287,6 @@ public class SysDeptServiceImpl implements ISysDeptService
         if (children.size() > 0)
         {
             deptMapper.updateDeptChildren(children);
-        }
-    }
-
-    /**
-     * 保存部门排序
-     *
-     * @param deptIds 部门ID数组
-     * @param orderNums 排序数组
-     */
-    @Override
-    @Transactional
-    public void updateDeptSort(String[] deptIds, String[] orderNums)
-    {
-        try
-        {
-            for (int i = 0; i < deptIds.length; i++)
-            {
-                SysDept dept = new SysDept();
-                dept.setDeptId(Convert.toLong(deptIds[i]));
-                dept.setOrderNum(Convert.toInt(orderNums[i]));
-                deptMapper.updateDeptSort(dept);
-            }
-        }
-        catch (Exception e)
-        {
-            throw new ServiceException("保存排序异常，请联系管理员");
         }
     }
 

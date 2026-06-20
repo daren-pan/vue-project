@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!--
+        Nexus Maven 私服配置
+        用法：mvn -s docker/k8s/settings-nexus.xml clean package
+    -->
+
+    <!-- 本地仓库路径（PVC 持久化缓存） -->
+    <localRepository>/cache/m2</localRepository>
+
+    <!-- Nexus 镜像：所有请求统一走 Nexus -->
+    <mirrors>
+        <mirror>
+            <id>nexus</id>
+            <name>RuoYi Nexus Repository</name>
+            <url>http://ruoyi-nexus:8081/nexus/repository/maven-public/</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+
+    <!-- Nexus 账号（默认 admin / 首次启动自动生成密码） -->
+    <servers>
+        <server>
+            <id>nexus</id>
+            <username>admin</username>
+            <password>admin123</password>
+        </server>
+    </servers>
+
+</settings>

@@ -14,7 +14,7 @@ import com.ruoyi.gen.domain.GenTable;
 import com.ruoyi.gen.domain.GenTableColumn;
 
 /**
- * 模板处理工具类
+ * 模板工具类
  * 
  * @author ruoyi
  */
@@ -28,12 +28,6 @@ public class VelocityUtils
 
     /** 默认上级菜单，系统工具 */
     private static final String DEFAULT_PARENT_MENU_ID = "3";
-
-    /** Vue3 Element Plus 模版 */
-    private static final String ELEMENT_PLUS = "element-plus";
-
-    /** Vue3 Element Plus TypeScript 模版 */
-    private static final String ELEMENT_PLUS_TYPESSRIPT = "element-plus-typescript";
 
     /**
      * 设置模板变量信息
@@ -60,7 +54,6 @@ public class VelocityUtils
         velocityContext.put("basePackage", getPackagePrefix(packageName));
         velocityContext.put("packageName", packageName);
         velocityContext.put("author", genTable.getFunctionAuthor());
-        velocityContext.put("colSpan", getColSpan(genTable.getFormColNum()));
         velocityContext.put("datetime", DateUtils.getDate());
         velocityContext.put("pkColumn", genTable.getPkColumn());
         velocityContext.put("importList", getImportList(genTable));
@@ -68,7 +61,6 @@ public class VelocityUtils
         velocityContext.put("columns", genTable.getColumns());
         velocityContext.put("table", genTable);
         velocityContext.put("dicts", getDicts(genTable));
-        setExtensionsContext(velocityContext, genTable.getOptions());
         setMenuVelocityContext(velocityContext, genTable);
         if (GenConstants.TPL_TREE.equals(tplCategory))
         {
@@ -79,13 +71,6 @@ public class VelocityUtils
             setSubVelocityContext(velocityContext, genTable);
         }
         return velocityContext;
-    }
-
-    public static void setExtensionsContext(VelocityContext context, String options)
-    {
-        JSONObject paramsObj = JSONObject.parseObject(options);
-        boolean genView = genView(paramsObj);
-        context.put("genView", genView);
     }
 
     public static void setMenuVelocityContext(VelocityContext context, GenTable genTable)
@@ -142,22 +127,12 @@ public class VelocityUtils
      * @param tplWebType 前端类型
      * @return 模板列表
      */
-    public static List<String> getTemplateList(GenTable table)
+    public static List<String> getTemplateList(String tplCategory, String tplWebType)
     {
-        String tplWebType = table.getTplWebType();
-        String tplCategory = table.getTplCategory();
-        JSONObject paramsObj = JSONObject.parseObject(table.getOptions());
-        boolean isView = genView(paramsObj);
         String useWebType = "vm/vue";
-        String apiTemplate = "vm/js/api.js.vm";
-        if (StringUtils.equals(ELEMENT_PLUS, tplWebType))
+        if ("element-plus".equals(tplWebType))
         {
             useWebType = "vm/vue/v3";
-        }
-        else if (StringUtils.equals(ELEMENT_PLUS_TYPESSRIPT, tplWebType))
-        {
-            useWebType = "vm/vue/v3ts";
-            apiTemplate = "vm/ts/api.ts.vm";
         }
         List<String> templates = new ArrayList<String>();
         templates.add("vm/java/domain.java.vm");
@@ -167,12 +142,7 @@ public class VelocityUtils
         templates.add("vm/java/controller.java.vm");
         templates.add("vm/xml/mapper.xml.vm");
         templates.add("vm/sql/sql.vm");
-        templates.add(apiTemplate);
-        if (StringUtils.equals(ELEMENT_PLUS_TYPESSRIPT, tplWebType))
-        {
-            templates.add("vm/ts/type.ts.vm");
-            templates.add("vm/ts/index.ts.vm");
-        }
+        templates.add("vm/js/api.js.vm");
         if (GenConstants.TPL_CRUD.equals(tplCategory))
         {
             templates.add(useWebType + "/index.vue.vm");
@@ -185,10 +155,6 @@ public class VelocityUtils
         {
             templates.add(useWebType + "/index.vue.vm");
             templates.add("vm/java/sub-domain.java.vm");
-        }
-        if (isView)
-        {
-            templates.add(useWebType + "/view.vue.vm");
         }
         return templates;
     }
@@ -249,18 +215,6 @@ public class VelocityUtils
         {
             fileName = StringUtils.format("{}/api/{}/{}.js", vuePath, moduleName, businessName);
         }
-        else if (template.contains("api.ts.vm"))
-        {
-            fileName = StringUtils.format("{}/api/{}/{}.ts", vuePath, moduleName, businessName);
-        }
-        else if (template.contains("type.ts.vm"))
-        {
-            fileName = StringUtils.format("{}/types/api/{}/{}.ts", vuePath, moduleName, businessName);
-        }
-        else if (template.contains("index.ts.vm"))
-        {
-            fileName = StringUtils.format("{}/types/api/index-bak.ts", vuePath);
-        }
         else if (template.contains("index.vue.vm"))
         {
             fileName = StringUtils.format("{}/views/{}/{}/index.vue", vuePath, moduleName, businessName);
@@ -268,10 +222,6 @@ public class VelocityUtils
         else if (template.contains("index-tree.vue.vm"))
         {
             fileName = StringUtils.format("{}/views/{}/{}/index.vue", vuePath, moduleName, businessName);
-        }
-        else if (template.contains("view.vue.vm"))
-        {
-            fileName = StringUtils.format("{}/views/{}/{}/view.vue", vuePath, moduleName, businessName);
         }
         return fileName;
     }
@@ -415,21 +365,6 @@ public class VelocityUtils
     }
 
     /**
-     * 扩展功能/生成详情页
-     * 
-     * @param paramsObj 生成其他选项
-     * @return 是否生成详细页
-     */
-    public static boolean genView(JSONObject paramsObj)
-    {
-        if (StringUtils.isNotNull(paramsObj) && paramsObj.containsKey(GenConstants.GEN_VIEW))
-        {
-            return paramsObj.getBoolean(GenConstants.GEN_VIEW);
-        }
-        return false;
-    }
-
-    /**
      * 获取树名称
      *
      * @param paramsObj 生成其他选项
@@ -469,24 +404,5 @@ public class VelocityUtils
             }
         }
         return num;
-    }
-
-    /**
-     * 获取表单 el-col span
-     * 
-     * @param formColNum 表单布局方式（1单列 2双列 3三列）
-     * @return span 数值字符串
-     */
-    public static String getColSpan(int formColNum)
-    {
-        if (formColNum == 2)
-        {
-            return "12";
-        }
-        else if (formColNum == 3)
-        {
-            return "8";
-        }
-        return "24";
     }
 }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.workflow.WfVariableMapper">
+
+    <resultMap type="com.ruoyi.system.domain.workflow.WfVariable" id="WfVariableResult">
+        <id property="id" column="id"/>
+        <result property="instanceId" column="instance_id"/>
+        <result property="varName" column="var_name"/>
+        <result property="varValue" column="var_value"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        SELECT id, instance_id, var_name, var_value, create_time FROM wf_variable
+    </sql>
+
+    <select id="selectByInstanceId" parameterType="Long" resultMap="WfVariableResult">
+        <include refid="selectVo"/> WHERE instance_id = #{instanceId}
+    </select>
+
+    <select id="getValue" resultType="String">
+        SELECT var_value FROM wf_variable WHERE instance_id = #{instanceId} AND var_name = #{varName} LIMIT 1
+    </select>
+
+    <insert id="insertWfVariable" parameterType="com.ruoyi.system.domain.workflow.WfVariable">
+        INSERT INTO wf_variable(instance_id, var_name, var_value, create_time)
+        VALUES (#{instanceId}, #{varName}, #{varValue}, SYSDATE())
+    </insert>
+
+    <delete id="deleteWfVariableByInstanceId" parameterType="Long">
+        DELETE FROM wf_variable WHERE instance_id = #{instanceId}
+    </delete>
+
+</mapper>

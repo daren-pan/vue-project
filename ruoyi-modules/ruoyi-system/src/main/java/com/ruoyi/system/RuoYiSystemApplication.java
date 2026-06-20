@@ -1,9 +1,13 @@
 package com.ruoyi.system;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.ruoyi.common.security.annotation.EnableCustomConfig;
 import com.ruoyi.common.security.annotation.EnableRyFeignClients;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 系统模块
@@ -13,6 +17,9 @@ import com.ruoyi.common.security.annotation.EnableRyFeignClients;
 @EnableCustomConfig
 @EnableRyFeignClients
 @SpringBootApplication
+@EnableAsync
+@EnableScheduling
+@MapperScan({"com.ruoyi.system.mapper", "com.ruoyi.system.mapper.workflow"})
 public class RuoYiSystemApplication
 {
     public static void main(String[] args)

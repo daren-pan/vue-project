@@ -38,16 +38,6 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="warning"
-          plain
-          icon="el-icon-check"
-          size="mini"
-          @click="handleSaveSort"
-          v-hasPermi="['system:dept:edit']"
-        >保存排序</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
           type="info"
           plain
           icon="el-icon-sort"
@@ -67,11 +57,7 @@
       :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
     >
       <el-table-column prop="deptName" label="部门名称" width="260"></el-table-column>
-      <el-table-column prop="orderNum" label="排序" width="200">
-        <template slot-scope="scope">
-          <el-input-number v-model="scope.row.orderNum" controls-position="right" :min="0" size="mini" style="width: 88px" />
-        </template>
-      </el-table-column>
+      <el-table-column prop="orderNum" label="排序" width="200"></el-table-column>
       <el-table-column prop="status" label="状态" width="100">
         <template slot-scope="scope">
           <dict-tag :options="dict.type.sys_normal_disable" :value="scope.row.status"/>
@@ -172,7 +158,7 @@
 </template>
 
 <script>
-import { listDept, getDept, delDept, addDept, updateDept, updateDeptSort, listDeptExcludeChild } from "@/api/system/dept"
+import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/system/dept"
 import Treeselect from "@riophae/vue-treeselect"
 import "@riophae/vue-treeselect/dist/vue-treeselect.css"
 
@@ -198,8 +184,6 @@ export default {
       isExpandAll: true,
       // 重新渲染表格状态
       refreshTable: true,
-      // 记录原始排序，用于对比变更
-      originalOrders: {},
       // 查询参数
       queryParams: {
         deptName: undefined,
@@ -244,8 +228,6 @@ export default {
       this.loading = true
       listDept(this.queryParams).then(response => {
         this.deptList = this.handleTree(response.data, "deptId")
-        // 记录原始排序值
-        this.recordOriginalOrders(this.deptList)
         this.loading = false
       })
     },
@@ -325,7 +307,7 @@ export default {
       })
     },
     /** 提交按钮 */
-    submitForm() {
+    submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
           if (this.form.deptId != undefined) {
@@ -342,40 +324,6 @@ export default {
             })
           }
         }
-      })
-    },
-    /** 递归记录原始排序 */
-    recordOriginalOrders(list) {
-      list.forEach(item => {
-        this.originalOrders[item.deptId] = item.orderNum
-        if (item.children && item.children.length) {
-          this.recordOriginalOrders(item.children)
-        }
-      })
-    },
-    /** 保存排序 */
-    handleSaveSort() {
-      const changedDeptIds = []
-      const changedOrderNums = []
-      const collectChanged = (list) => {
-        list.forEach(item => {
-          if (String(this.originalOrders[item.deptId]) !== String(item.orderNum)) {
-            changedDeptIds.push(item.deptId)
-            changedOrderNums.push(item.orderNum)
-          }
-          if (item.children && item.children.length) {
-            collectChanged(item.children)
-          }
-        })
-      }
-      collectChanged(this.deptList)
-      if (changedDeptIds.length === 0) {
-        this.$modal.msgWarning("未检测到排序修改")
-        return
-      }
-      updateDeptSort({ deptIds: changedDeptIds.join(","), orderNums: changedOrderNums.join(",") }).then(() => {
-        this.$modal.msgSuccess("排序保存成功")
-        this.recordOriginalOrders(this.deptList)
       })
     },
     /** 删除按钮操作 */

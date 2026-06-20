@@ -34,6 +34,13 @@ modules(){
 	docker-compose up -d ruoyi-nginx ruoyi-gateway ruoyi-auth ruoyi-modules-system
 }
 
+# 启动 ELK 日志系统（Docker）
+elk(){
+	echo "=== 启动 ELK 日志系统 ==="
+	docker-compose up -d elasticsearch-elk logstash kibana
+	echo "Kibana 访问地址: http://localhost:5601"
+}
+
 # 关闭所有环境/模块
 stop(){
 	docker-compose stop
@@ -54,6 +61,9 @@ case "$1" in
 ;;
 "modules")
 	modules
+;;
+"elk")
+	elk
 ;;
 "stop")
 	stop

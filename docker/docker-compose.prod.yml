@@ -1,0 +1,160 @@
+version : '3.8'
+# ============================================================
+# 生产模拟 Compose（与 K8s 一致的 ACR 镜像，不本地构建）
+# 用法：docker-compose -f docker-compose.prod.yml up -d
+# ============================================================
+services:
+  ruoyi-nacos:
+    container_name: ruoyi-nacos
+    image: nacos/nacos-server:v2.5.1
+    environment:
+      - MODE=standalone
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_TOKEN=EbejS4ILlIZicDHDQc6R2rcgRuanjOq8Olqyx1lwLMY=
+      - NACOS_AUTH_IDENTITY_KEY=admin
+      - NACOS_AUTH_IDENTITY_VALUE=security
+    volumes:
+      - ./nacos/logs/:/home/nacos/logs
+      - ./nacos/conf/application.properties:/home/nacos/conf/application.properties
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    depends_on:
+      - ruoyi-mysql
+  ruoyi-mysql:
+    container_name: ruoyi-mysql
+    image: mysql:5.7
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql/conf:/etc/mysql/conf.d
+      - ./mysql/logs:/logs
+      - ./mysql/data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    command: [
+          'mysqld',
+          '--innodb-buffer-pool-size=80M',
+          '--character-set-server=utf8mb4',
+          '--collation-server=utf8mb4_unicode_ci',
+          '--default-time-zone=+8:00',
+          '--lower-case-table-names=1'
+        ]
+    environment:
+      MYSQL_DATABASE: 'ry-cloud'
+      MYSQL_ROOT_PASSWORD: password
+  ruoyi-redis:
+    container_name: ruoyi-redis
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/conf/redis.conf:/home/ruoyi/redis/redis.conf:ro
+      - redis-data:/data
+    command: redis-server /home/ruoyi/redis/redis.conf --dir /data
+    restart: unless-stopped
+  ruoyi-nginx:
+    container_name: ruoyi-nginx
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-nginx:latest
+    ports:
+      - "81:80"
+    volumes:
+      - ./nginx/html/dist:/home/ruoyi/projects/ruoyi-ui
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/logs:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - ruoyi-gateway
+    links:
+      - ruoyi-gateway
+  ruoyi-gateway:
+    container_name: ruoyi-gateway
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-gateway:3.6.7
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ruoyi-redis
+    links:
+      - ruoyi-redis
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - REDIS_HOST=ruoyi-redis
+  ruoyi-auth:
+    container_name: ruoyi-auth
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-auth:3.6.7
+    ports:
+      - "9200:9200"
+    depends_on:
+      - ruoyi-redis
+    links:
+      - ruoyi-redis
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - REDIS_HOST=ruoyi-redis
+  ruoyi-modules-system:
+    container_name: ruoyi-modules-system
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-system:3.6.7
+    ports:
+      - "9301:9301"
+      - "5005:5005"
+    depends_on:
+      - ruoyi-redis
+      - ruoyi-mysql
+    links:
+      - ruoyi-redis
+      - ruoyi-mysql
+    environment:
+      - SERVER_PORT=9301
+      - NACOS_HOST=ruoyi-nacos
+      - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - REDIS_HOST=ruoyi-redis
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=nacos
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=nacos
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=nacos
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=nacos
+      - SPRING_CLOUD_NACOS_DISCOVERY_WEIGHT=1
+      - JAVA_OPTS=-javaagent:/sw-agent/skywalking-agent.jar -Dskywalking.agent.service_name=ruoyi-modules-system
+      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=oap:11800
+    volumes:
+      - ./skywalking/skywalking-agent:/sw-agent
+  ruoyi-modules-gen:
+    container_name: ruoyi-modules-gen
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-gen:3.6.7
+    ports:
+      - "9202:9202"
+    depends_on:
+      - ruoyi-mysql
+    links:
+      - ruoyi-mysql
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - REDIS_HOST=ruoyi-redis
+  ruoyi-modules-job:
+    container_name: ruoyi-modules-job
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-job:3.6.7
+    ports:
+      - "9203:9203"
+    depends_on:
+      - ruoyi-mysql
+    links:
+      - ruoyi-mysql
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - DB_HOST=ruoyi-mysql
+      - REDIS_HOST=ruoyi-redis
+  ruoyi-modules-file:
+    container_name: ruoyi-modules-file
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-file:3.6.7
+    ports:
+      - "9300:9300"
+    volumes:
+    - ./ruoyi/uploadPath:/home/ruoyi/uploadPath
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - DB_HOST=ruoyi-mysql
+      - REDIS_HOST=ruoyi-redis
+volumes:
+  redis-data:

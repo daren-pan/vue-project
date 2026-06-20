@@ -26,10 +26,6 @@
           <size-select id="size-select" class="right-menu-item hover-effect" />
         </el-tooltip>
 
-        <el-tooltip content="消息通知" effect="dark" placement="bottom">
-          <header-notice id="header-notice" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
       </template>
 
       <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="hover">
@@ -44,9 +40,6 @@
           <el-dropdown-item @click.native="setLayout" v-if="setting">
             <span>布局设置</span>
           </el-dropdown-item>
-          <el-dropdown-item @click.native="lockScreen">
-            <span>锁定屏幕</span>
-          </el-dropdown-item>
           <el-dropdown-item divided @click.native="logout">
             <span>退出登录</span>
           </el-dropdown-item>
@@ -59,7 +52,7 @@
 <script>
 import { mapGetters } from 'vuex'
 import Breadcrumb from '@/components/Breadcrumb'
-import TopNav from './TopNav'
+import TopNav from '@/components/TopNav'
 import TopBar from './TopBar'
 import Logo from './Sidebar/Logo'
 import Hamburger from '@/components/Hamburger'
@@ -68,9 +61,9 @@ import SizeSelect from '@/components/SizeSelect'
 import Search from '@/components/HeaderSearch'
 import RuoYiGit from '@/components/RuoYi/Git'
 import RuoYiDoc from '@/components/RuoYi/Doc'
-import HeaderNotice from './HeaderNotice'
 
 export default {
+  emits: ['setLayout'],
   components: {
     Breadcrumb,
     Logo,
@@ -81,8 +74,7 @@ export default {
     SizeSelect,
     Search,
     RuoYiGit,
-    RuoYiDoc,
-    HeaderNotice
+    RuoYiDoc
   },
   computed: {
     ...mapGetters([
@@ -113,12 +105,6 @@ export default {
     },
     setLayout(event) {
       this.$emit('setLayout')
-    },
-    lockScreen() {
-      const currentPath = this.$route.fullPath
-      this.$store.dispatch('lock/lockScreen', currentPath).then(() => {
-        this.$router.push('/lock')
-      })
     },
     logout() {
       this.$confirm('确定注销并退出系统吗？', '提示', {
@@ -185,6 +171,11 @@ export default {
     align-items: center;
     overflow: hidden;
     margin-left: 8px;
+  }
+
+  .errLog-container {
+    display: inline-block;
+    vertical-align: top;
   }
 
   .right-menu {

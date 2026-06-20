@@ -1,0 +1,103 @@
+# ==================== Nexus Maven 私服 ====================
+# 用途：缓存 Maven 依赖，加速构建
+# K8s 内部：http://ruoyi-nexus:8081
+# 外部访问：http://localhost:8880/nexus（通过 Ingress）
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nexus-data
+  namespace: ruoyi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruoyi-nexus
+  namespace: ruoyi
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+  selector:
+    app: ruoyi-nexus
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruoyi-nexus
+  namespace: ruoyi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ruoyi-nexus
+  template:
+    metadata:
+      labels:
+        app: ruoyi-nexus
+    spec:
+      containers:
+        - name: nexus
+          image: m.daocloud.io/docker.io/sonatype/nexus3:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: INSTALL4J_ADD_VM_PARAMS
+              value: "-Xms512m -Xmx1024m -XX:MaxDirectMemorySize=512m -Dnexus-context-path=/nexus"
+          volumeMounts:
+            - name: nexus-data
+              mountPath: /nexus-data
+          readinessProbe:
+            httpGet:
+              path: /nexus/
+              port: 8081
+            initialDelaySeconds: 120
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /nexus/
+              port: 8081
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+      volumes:
+        - name: nexus-data
+          persistentVolumeClaim:
+            claimName: nexus-data
+
+---
+# Nexus Ingress（纯路由，不 rewrite — Nexus 自带 context-path）
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexus-ingress
+  namespace: ruoyi
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /nexus
+            pathType: Prefix
+            backend:
+              service:
+                name: ruoyi-nexus
+                port:
+                  number: 8081

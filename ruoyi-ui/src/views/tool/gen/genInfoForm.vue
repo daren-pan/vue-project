@@ -17,7 +17,6 @@
           <el-select v-model="info.tplWebType">
             <el-option label="Vue2 Element UI 模版" value="element-ui" />
             <el-option label="Vue3 Element Plus 模版" value="element-plus" />
-            <el-option label="Vue3 Element Plus TypeScript 模版" value="element-plus-typescript" />
           </el-select>
         </el-form-item>
       </el-col>
@@ -66,29 +65,6 @@
             </el-tooltip>
           </span>
           <el-input v-model="info.functionName" />
-        </el-form-item>
-      </el-col>
-
-      <el-col :span="12">
-        <el-form-item prop="formColNum">
-          <span slot="label">
-            表单布局
-            <el-tooltip content="选择表单的栅格布局方式" placement="top">
-              <i class="el-icon-question"></i>
-            </el-tooltip>
-          </span>
-          <el-select v-model="info.formColNum">
-            <el-option label="单列" :value="1" />
-            <el-option label="双列" :value="2" />
-            <el-option label="三列" :value="3" />
-          </el-select>
-        </el-form-item>
-      </el-col>
-
-      <el-col :span="12">
-        <el-form-item prop="genView">
-          <span slot="label">扩展功能</span>
-          <el-checkbox v-model="info.view">生成详情页</el-checkbox>
         </el-form-item>
       </el-col>
 
@@ -316,7 +292,7 @@ export default {
     },
     /** 选择生成模板触发 */
     tplSelectChange(value) {
-      if (value !== 'sub') {
+      if(value !== 'sub') {
         this.info.subTableName = ''
         this.info.subTableFkName = ''
       }

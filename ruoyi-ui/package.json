@@ -1,6 +1,6 @@
 {
   "name": "ruoyi",
-  "version": "3.6.8",
+  "version": "3.6.7",
   "description": "若依管理系统",
   "author": "若依",
   "license": "MIT",
@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@riophae/vue-treeselect": "0.4.0",
-    "axios": "0.30.3",
+    "axios": "0.28.1",
     "clipboard": "2.0.8",
     "core-js": "3.37.1",
     "echarts": "5.4.0",
@@ -40,6 +40,7 @@
     "quill": "2.0.2",
     "screenfull": "5.0.2",
     "sortablejs": "1.10.2",
+    "splitpanes": "2.4.1",
     "vue": "2.6.12",
     "vue-count-to": "1.0.13",
     "vue-cropper": "0.5.5",

@@ -3,7 +3,6 @@ package com.ruoyi.job.domain;
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.annotation.Excel;
 import com.ruoyi.common.core.web.domain.BaseEntity;
 
@@ -45,12 +44,10 @@ public class SysJobLog extends BaseEntity
     private String exceptionInfo;
 
     /** 开始时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date startTime;
 
-    /** 结束时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private Date endTime;
+    /** 停止时间 */
+    private Date stopTime;
 
     public Long getJobLogId()
     {
@@ -132,14 +129,14 @@ public class SysJobLog extends BaseEntity
         this.startTime = startTime;
     }
     
-    public Date getEndTime()
+    public Date getStopTime()
     {
-        return endTime;
+        return stopTime;
     }
 
-    public void setEndTime(Date endTime)
+    public void setStopTime(Date stopTime)
     {
-        this.endTime = endTime;
+        this.stopTime = stopTime;
     }
 
     @Override
@@ -152,7 +149,7 @@ public class SysJobLog extends BaseEntity
             .append("status", getStatus())
             .append("exceptionInfo", getExceptionInfo())
             .append("startTime", getStartTime())
-            .append("stopTime", getEndTime())
+            .append("stopTime", getStopTime())
             .toString();
     }
 }

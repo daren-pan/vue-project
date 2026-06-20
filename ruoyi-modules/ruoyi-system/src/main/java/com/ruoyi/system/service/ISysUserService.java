@@ -1,14 +1,19 @@
 package com.ruoyi.system.service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.system.api.domain.SysUser;
+import com.ruoyi.system.domain.vo.AsyncDataRecord;
 
 /**
  * 用户 业务层
  * 
  * @author ruoyi
  */
-public interface ISysUserService
+public interface ISysUserService extends IService<SysUser>
 {
     /**
      * 根据条件分页查询用户列表
@@ -211,4 +216,13 @@ public interface ISysUserService
      * @return 结果
      */
     public String importUser(List<SysUser> userList, Boolean isUpdateSupport, String operName);
+
+    /**
+     * 大数据查询异步线程测试
+     *
+     * @param queryParam 查询参数
+     * @param recordCount 查询数量
+     * @return 结果
+     */
+    public CompletableFuture<List<AsyncDataRecord>> queryLargeData(String queryParam, int recordCount);
 }

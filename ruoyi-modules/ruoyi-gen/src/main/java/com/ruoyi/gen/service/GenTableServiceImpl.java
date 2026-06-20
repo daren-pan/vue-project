@@ -4,8 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +157,7 @@ public class GenTableServiceImpl implements IGenTableService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void importGenTable(List<GenTable> tableList, String tplWebType)
+    public void importGenTable(List<GenTable> tableList)
     {
         String operName = SecurityUtils.getUsername();
         try
@@ -167,7 +165,6 @@ public class GenTableServiceImpl implements IGenTableService
             for (GenTable table : tableList)
             {
                 String tableName = table.getTableName();
-                table.setTplWebType(tplWebType);
                 GenUtils.initTable(table, operName);
                 int row = genTableMapper.insertGenTable(table);
                 if (row > 0)
@@ -209,7 +206,7 @@ public class GenTableServiceImpl implements IGenTableService
         VelocityContext context = VelocityUtils.prepareContext(table);
 
         // 获取模板列表
-        List<String> templates = VelocityUtils.getTemplateList(table);
+        List<String> templates = VelocityUtils.getTemplateList(table.getTplCategory(), table.getTplWebType());
         for (String template : templates)
         {
             // 渲染模板
@@ -230,7 +227,11 @@ public class GenTableServiceImpl implements IGenTableService
     @Override
     public byte[] downloadCode(String tableName)
     {
-        return downloadCode(new String[] { tableName });
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ZipOutputStream zip = new ZipOutputStream(outputStream);
+        generatorCode(tableName, zip);
+        IOUtils.closeQuietly(zip);
+        return outputStream.toByteArray();
     }
 
     /**
@@ -253,10 +254,10 @@ public class GenTableServiceImpl implements IGenTableService
         VelocityContext context = VelocityUtils.prepareContext(table);
 
         // 获取模板列表
-        List<String> templates = VelocityUtils.getTemplateList(table);
+        List<String> templates = VelocityUtils.getTemplateList(table.getTplCategory(), table.getTplWebType());
         for (String template : templates)
         {
-            if (!StringUtils.containsAny(template, "sql.vm", "api.js.vm", "api.ts.vm", "type.ts.vm", "index.ts.vm", "index.vue.vm", "index-tree.vue.vm", "view.vue.vm"))
+            if (!StringUtils.containsAny(template, "sql.vm", "api.js.vm", "index.vue.vm", "index-tree.vue.vm"))
             {
                 // 渲染模板
                 StringWriter sw = new StringWriter();
@@ -341,14 +342,9 @@ public class GenTableServiceImpl implements IGenTableService
     {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(outputStream);
-        Map<String, StringBuffer> typeFiles = new HashMap<>();
         for (String tableName : tableNames)
         {
-            generatorCode(tableName, zip, typeFiles);
-        }
-        for (Map.Entry<String, StringBuffer> entry : typeFiles.entrySet())
-        {
-            writeToZip(zip, entry.getKey(), entry.getValue().toString());
+            generatorCode(tableName, zip);
         }
         IOUtils.closeQuietly(zip);
         return outputStream.toByteArray();
@@ -357,7 +353,7 @@ public class GenTableServiceImpl implements IGenTableService
     /**
      * 查询表信息并生成代码
      */
-    private void generatorCode(String tableName, ZipOutputStream zip, Map<String, StringBuffer> typeFiles)
+    private void generatorCode(String tableName, ZipOutputStream zip)
     {
         // 查询表信息
         GenTable table = genTableMapper.selectGenTableByName(tableName);
@@ -371,53 +367,26 @@ public class GenTableServiceImpl implements IGenTableService
         VelocityContext context = VelocityUtils.prepareContext(table);
 
         // 获取模板列表
-        List<String> templates = VelocityUtils.getTemplateList(table);
+        List<String> templates = VelocityUtils.getTemplateList(table.getTplCategory(), table.getTplWebType());
         for (String template : templates)
         {
             // 渲染模板
             StringWriter sw = new StringWriter();
             Template tpl = Velocity.getTemplate(template, Constants.UTF8);
             tpl.merge(context, sw);
-            String fileName = VelocityUtils.getFileName(template, table);
-            // index-bak.ts 模版，追加内容
-            if (fileName.contains("index-bak.ts"))
+            try
             {
-                if (!typeFiles.containsKey(fileName))
-                {
-                    typeFiles.put(fileName, new StringBuffer(sw.toString()));
-                }
-                else
-                {
-                    Arrays.stream(sw.toString().split("\n")).filter(line -> line.startsWith("export * from")).forEach(line -> typeFiles.get(fileName).append("\n").append(line));
-                }
+                // 添加到zip
+                zip.putNextEntry(new ZipEntry(VelocityUtils.getFileName(template, table)));
+                IOUtils.write(sw.toString(), zip, Constants.UTF8);
+                IOUtils.closeQuietly(sw);
+                zip.flush();
+                zip.closeEntry();
             }
-            else
+            catch (IOException e)
             {
-                // 其他文件正常添加
-                writeToZip(zip, fileName, sw.toString());
+                log.error("渲染模板失败，表名：" + table.getTableName(), e);
             }
-        }
-    }
-
-    /**
-     * 将字符串内容写入ZIP输出流
-     * 
-     * @param zip ZIP输出流
-     * @param fileName ZIP条目名称（即文件名）
-     * @param content 要写入的内容
-     */
-    private void writeToZip(ZipOutputStream zip, String fileName, String content)
-    {
-        try
-        {
-            zip.putNextEntry(new ZipEntry(fileName));
-            IOUtils.write(content, zip, Constants.UTF8);
-            zip.flush();
-            zip.closeEntry();
-        }
-        catch (IOException e)
-        {
-            log.error("写入ZIP文件失败，文件名: " + fileName, e);
         }
     }
 
@@ -524,14 +493,12 @@ public class GenTableServiceImpl implements IGenTableService
             String treeName = paramsObj.getString(GenConstants.TREE_NAME);
             Long parentMenuId = paramsObj.getLongValue(GenConstants.PARENT_MENU_ID);
             String parentMenuName = paramsObj.getString(GenConstants.PARENT_MENU_NAME);
-            boolean isView = paramsObj.getBooleanValue(GenConstants.GEN_VIEW);
 
             genTable.setTreeCode(treeCode);
             genTable.setTreeParentCode(treeParentCode);
             genTable.setTreeName(treeName);
             genTable.setParentMenuId(parentMenuId);
             genTable.setParentMenuName(parentMenuName);
-            genTable.setView(isView);
         }
     }
 
