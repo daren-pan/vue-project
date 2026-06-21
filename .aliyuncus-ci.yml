@@ -74,7 +74,6 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/auth/dockerfile
               dockerContext: docker/ruoyi/auth
-              cacheType: remote
 
       buildGateway:
         name: ruoyi-gateway镜像
@@ -93,7 +92,6 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/gateway/dockerfile
               dockerContext: docker/ruoyi/gateway
-              cacheType: remote
 
       buildSystem:
         name: ruoyi-system镜像
@@ -112,7 +110,6 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/system/dockerfile
               dockerContext: docker/ruoyi/modules/system
-              cacheType: remote
 
       buildGen:
         name: ruoyi-gen镜像
@@ -131,7 +128,6 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/gen/dockerfile
               dockerContext: docker/ruoyi/modules/gen
-              cacheType: remote
 
       buildJob:
         name: ruoyi-job镜像
@@ -150,7 +146,6 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/job/dockerfile
               dockerContext: docker/ruoyi/modules/job
-              cacheType: remote
 
       buildFile:
         name: ruoyi-file镜像
@@ -169,4 +164,3 @@ stages:
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/file/dockerfile
               dockerContext: docker/ruoyi/modules/file
-              cacheType: remote
