@@ -3,20 +3,20 @@
 # ============================================================
 sources:
   ruoyiRepo:
-    type: github
-    name: GitHub源码
-    endpoint: https://github.com/daren-pan/RuoYi-Cloud.git
+    type: codeup
+    name: Codeup源码
+    endpoint: https://codeup.aliyun.com/6a31f41b5a46a9699cb73592/daren-pan/RuoYi-Cloud.git
     branch: springboot3
     certificate:
       type: serviceConnection
-      serviceConnection: gnjkins4tfde6pub
+      serviceConnection: j9zxaboxgwmqirft
 
 stages:
-  mavenBuild:
-    name: Maven编译
+  buildAndPush:
+    name: 编译构建推送
     jobs:
-      mavenCompile:
-        name: 后端编译打包并复制JAR
+      allInOne:
+        name: 全部服务编译构建推送
         runsOn:
           group: public/cn-beijing
           container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
@@ -26,7 +26,7 @@ stages:
             step: SetupJava
             with:
               jdkVersion: "17"
-          buildAndCopy:
+          mavenAndCopy:
             name: Maven编译并复制JAR
             step: Command
             with:
@@ -35,132 +35,117 @@ stages:
                   -pl ruoyi-modules/ruoyi-system,ruoyi-modules/ruoyi-gen,ruoyi-modules/ruoyi-job,ruoyi-modules/ruoyi-file,ruoyi-gateway,ruoyi-auth \
                   -am
 
-                echo "=== 复制 JAR ==="
                 mkdir -p docker/ruoyi/auth/jar
                 cp ruoyi-auth/target/ruoyi-auth.jar docker/ruoyi/auth/jar/
-
                 mkdir -p docker/ruoyi/gateway/jar
                 cp ruoyi-gateway/target/ruoyi-gateway.jar docker/ruoyi/gateway/jar/
-
                 mkdir -p docker/ruoyi/modules/system/jar
                 cp ruoyi-modules/ruoyi-system/target/ruoyi-modules-system.jar docker/ruoyi/modules/system/jar/
-
                 mkdir -p docker/ruoyi/modules/gen/jar
                 cp ruoyi-modules/ruoyi-gen/target/ruoyi-modules-gen.jar docker/ruoyi/modules/gen/jar/
-
                 mkdir -p docker/ruoyi/modules/job/jar
                 cp ruoyi-modules/ruoyi-job/target/ruoyi-modules-job.jar docker/ruoyi/modules/job/jar/
-
                 mkdir -p docker/ruoyi/modules/file/jar
                 cp ruoyi-modules/ruoyi-file/target/ruoyi-modules-file.jar docker/ruoyi/modules/file/jar/
 
-  dockerBuildPush:
-    name: Docker构建推送ACR
-    jobs:
-      buildAuth:
-        name: ruoyi-auth镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          setupNode:
+            name: 安装Node环境
+            step: SetupNode
+            with:
+              versionType: "predefined"
+              nodeVersion: "20.5"
+          npmBuild:
+            name: 前端编译
+            step: Command
+            with:
+              run: |
+                cd ruoyi-ui
+                npm install
+                npm run build:prod
+                cd ..
+                mkdir -p docker/nginx/html
+                cp -r ruoyi-ui/dist docker/nginx/html/
+
+          buildNginx:
+            step: DockerBuildPushACR
+            name: 构建推送ruoyi-nginx
+            with:
+              serviceConnection: uson78n1xebwsgdy
+              artifact: ruoyi-nginx
+              region: cn-hangzhou
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-nginx
+              dockerTag: "3.6.7"
+              dockerfilePath: docker/nginx/dockerfile
+              dockerContext: docker/nginx
+
+          buildAuth:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-auth
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-auth
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-auth
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/auth/dockerfile
               dockerContext: docker/ruoyi/auth
 
-      buildGateway:
-        name: ruoyi-gateway镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          buildGateway:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-gateway
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-gateway
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-gateway
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/gateway/dockerfile
               dockerContext: docker/ruoyi/gateway
 
-      buildSystem:
-        name: ruoyi-system镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          buildSystem:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-system
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-system
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-system
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/system/dockerfile
               dockerContext: docker/ruoyi/modules/system
 
-      buildGen:
-        name: ruoyi-gen镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          buildGen:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-gen
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-gen
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-gen
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/gen/dockerfile
               dockerContext: docker/ruoyi/modules/gen
 
-      buildJob:
-        name: ruoyi-job镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          buildJob:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-job
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-job
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-job
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/job/dockerfile
               dockerContext: docker/ruoyi/modules/job
 
-      buildFile:
-        name: ruoyi-file镜像
-        runsOn:
-          group: public/cn-beijing
-          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
-        steps:
-          dockerBuildPush:
+          buildFile:
             step: DockerBuildPushACR
             name: 构建推送ruoyi-file
             with:
               serviceConnection: uson78n1xebwsgdy
               artifact: ruoyi-file
               region: cn-hangzhou
-              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal
+              dockerRegistry: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-file
               dockerTag: "3.6.7"
               dockerfilePath: docker/ruoyi/modules/file/dockerfile
               dockerContext: docker/ruoyi/modules/file

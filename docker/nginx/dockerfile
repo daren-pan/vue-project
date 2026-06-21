@@ -1,5 +1,5 @@
 # 基础镜像
-FROM nginx
+FROM m.daocloud.io/docker.io/library/nginx:1.25-alpine
 # author
 MAINTAINER ruoyi
 
