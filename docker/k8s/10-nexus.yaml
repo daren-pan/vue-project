@@ -89,6 +89,8 @@ kind: Ingress
 metadata:
   name: nexus-ingress
   namespace: ruoyi
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "500m"
 spec:
   ingressClassName: nginx
   rules:

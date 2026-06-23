@@ -9,9 +9,9 @@ data:
   application.properties: |
     spring.datasource.platform=mysql
     db.num=1
-    db.url.0=jdbc:mysql://ruoyi-mysql:3308/ry-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+    db.url.0=jdbc:mysql://rm-bp1j67t523vb8tiye.mysql.rds.aliyuncs.com:3306/ry-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
     db.user=root
-    db.password=password
+    db.password=Cai@123456
 
     nacos.naming.empty-service.auto-clean=true
     nacos.naming.empty-service.clean.initial-delay-ms=50000
@@ -78,9 +78,11 @@ spec:
       labels:
         app: ruoyi-nacos
     spec:
+      imagePullSecrets:
+        - name: acr-auth
       containers:
         - name: nacos
-          image: nacos/nacos-server:v2.5.1
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/nacos-server:v2.5.1
           ports:
             - containerPort: 8848
             - containerPort: 9848

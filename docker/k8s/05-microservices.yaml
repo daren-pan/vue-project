@@ -225,7 +225,7 @@ metadata:
   name: ruoyi-gen
   namespace: ruoyi
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: ruoyi-gen
@@ -294,7 +294,7 @@ metadata:
   name: ruoyi-job
   namespace: ruoyi
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: ruoyi-job

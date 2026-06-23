@@ -273,18 +273,63 @@
                         </execution>
                     </executions>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
-    <repositories>
+    <distributionManagement>
         <repository>
-            <id>public</id>
-            <name>aliyun nexus</name>
+            <id>repo-jbspy</id>
+            <name>RuoYi Releases</name>
+            <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy</url>
+        </repository>
+        <snapshotRepository>
+            <id>repo-ykcyv</id>
+            <name>RuoYi Snapshots</name>
+            <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-ykcyv</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <repositories>
+        <!-- 云效制品仓库：拉取本项目发布的 jar -->
+        <repository>
+            <id>repo-jbspy</id>
+            <name>RuoYi Releases</name>
+            <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-jbspy</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>repo-ykcyv</id>
+            <name>RuoYi Snapshots</name>
+            <url>https://packages.aliyun.com/6a31f41b5a46a9699cb73592/maven/repo-ykcyv</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <!-- 阿里云镜像：拉取公共依赖 -->
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Maven Public</name>
             <url>https://maven.aliyun.com/repository/public</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
 

@@ -37,7 +37,7 @@ pipeline {
         }
 
         // ============================================================
-        // 2. 准备代码 + 增量检测
+        // 2. 准备代码 + 增量检测 + 生成唯一标签
         // ============================================================
         stage('Prepare & Detect Changes') {
             steps {
@@ -45,6 +45,11 @@ pipeline {
                 checkout scm
 
                 script {
+                    // 生成唯一镜像标签：版本号-构建号-Git短哈希
+                    GIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    UNIQUE_TAG = "3.6.7-b${BUILD_NUMBER}-${GIT_HASH}"
+                    echo "  镜像标签: ${UNIQUE_TAG}"
+
                     echo '  检测文件变更...'
                     try {
                         def oldCommit = sh(script: 'git rev-parse HEAD~1', returnStdout: true).trim()
@@ -58,13 +63,16 @@ pipeline {
                     B_A  = sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-auth|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
                     B_G  = sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-gateway|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
                     B_S  = sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-modules/ruoyi-system|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
+                    B_Gen = sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-modules/ruoyi-gen|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
+                    B_Job = sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-modules/ruoyi-job|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
+                    B_File= sh(script: "echo '${DIFF}' | grep -cE '^(ruoyi-modules/ruoyi-file|ruoyi-api|ruoyi-common)/' || true", returnStdout: true).trim().toInteger()
 
                     if (DIFF == 'ALL') {
-                        B_UI = 1; B_A = 1; B_G = 1; B_S = 1
+                        B_UI = 1; B_A = 1; B_G = 1; B_S = 1; B_Gen = 1; B_Job = 1; B_File = 1
                     }
 
                     echo "  变更文件: ${DIFF}"
-                    echo "  UI=${B_UI}  Auth=${B_A}  Gateway=${B_G}  System=${B_S}"
+                    echo "  UI=${B_UI}  Auth=${B_A}  Gateway=${B_G}  System=${B_S}  Gen=${B_Gen}  Job=${B_Job}  File=${B_File}"
                 }
             }
         }
@@ -77,15 +85,17 @@ pipeline {
                 echo '[3/5] 编译...'
 
                 script {
-                    // 构建 Maven 模块列表
                     def mavenModules = []
-                    if (B_A > 0)  { mavenModules.add('ruoyi-auth') }
-                    if (B_G > 0)  { mavenModules.add('ruoyi-gateway') }
-                    if (B_S > 0)  { mavenModules.add('ruoyi-modules/ruoyi-system') }
+                    if (B_A > 0)   { mavenModules.add('ruoyi-auth') }
+                    if (B_G > 0)   { mavenModules.add('ruoyi-gateway') }
+                    if (B_S > 0)   { mavenModules.add('ruoyi-modules/ruoyi-system') }
+                    if (B_Gen > 0) { mavenModules.add('ruoyi-modules/ruoyi-gen') }
+                    if (B_Job > 0) { mavenModules.add('ruoyi-modules/ruoyi-job') }
+                    if (B_File> 0) { mavenModules.add('ruoyi-modules/ruoyi-file') }
 
                     def parallelTasks = [:]
 
-                    // Maven 后端编译
+                    // Maven 后端编译（使用云效 settings.xml）
                     if (mavenModules) {
                         def modules = mavenModules.join(',')
                         echo "  [后端] Maven 编译: ${modules}"
@@ -96,7 +106,7 @@ pipeline {
                                     -v ${WORKSPACE}:/workspace \
                                     -w /workspace \
                                     maven:3.9-eclipse-temurin-17 \
-                                    mvn clean package -DskipTests -pl ${modules} -am
+                                    mvn -s settings.xml clean package -DskipTests -pl ${modules} -am
                             """
                         }
                     } else {
@@ -112,14 +122,13 @@ pipeline {
                                     -v ${NPM_CACHE}:/root/.npm \
                                     -v ${WORKSPACE}/ruoyi-ui:/app \
                                     -w /app \
-                                    node:18-alpine sh -c 'npm install && npm run build:prod'
+                                    node:18-alpine sh -c 'npm install --registry=https://registry.npmmirror.com && npm run build:prod'
                             """
                         }
                     } else {
                         echo '  [前端] 无变更，跳过'
                     }
 
-                    // 并行执行
                     if (parallelTasks) {
                         parallel parallelTasks
                     }
@@ -128,55 +137,66 @@ pipeline {
         }
 
         // ============================================================
-        // 4. 构建镜像 + 推送 ACR + 部署 K8s
+        // 4. 构建镜像 + 推送 ACR + Helm 部署
         // ============================================================
         stage('Build, Push & Deploy') {
             steps {
                 echo '[4/5] 构建 & 部署...'
 
-                // nginx 前端镜像
                 script {
-                    if (B_UI > 0) {
-                        sh '''
-                            echo "  [nginx] 打包镜像..."
-                            mkdir -p docker/nginx/html
-                            rm -rf docker/nginx/html/dist
-                            cp -r ruoyi-ui/dist docker/nginx/html/dist
-                            docker build --no-cache \
-                                -t ${REG}/ruoyi-nginx:latest \
-                                -f docker/nginx/dockerfile docker/nginx
-                            echo "  [nginx] 推送 ACR..."
-                            docker push ${REG}/ruoyi-nginx:latest
-                            echo "  [nginx] 滚动更新..."
-                            kubectl rollout restart deploy/ruoyi-nginx -n ${K8S_NAMESPACE}
-                            kubectl rollout status deploy/ruoyi-nginx -n ${K8S_NAMESPACE} --timeout=120s
-                            echo "  [nginx] ✅ 完成"
-                        '''
-                    }
-                }
-
-                // 后端微服务：复制 JAR → 构建镜像 → 推送 ACR → 滚动重启
-                script {
-                    def buildAndDeploy = { serviceName, jarPath, dockerContext ->
+                    // 构建并推送：双标签（唯一标签 + 滚动标签）
+                    def buildAndDeploy = { serviceName, jarPath, dockerContext, extraTag = null ->
                         echo "  [${serviceName}] 打包镜像..."
                         sh "cp ${jarPath}/target/*.jar docker/ruoyi/${dockerContext}/jar/ 2>/dev/null || true"
+                        def rollingTag = extraTag ?: IMAGE_TAG
                         sh """
                             docker build \
-                                -t ${REG}/${serviceName}:${IMAGE_TAG} \
+                                -t ${REG}/${serviceName}:${UNIQUE_TAG} \
+                                -t ${REG}/${serviceName}:${rollingTag} \
                                 -f docker/ruoyi/${dockerContext}/dockerfile \
                                 docker/ruoyi/${dockerContext}
                         """
-                        echo "  [${serviceName}] 推送 ACR..."
-                        sh "docker push ${REG}/${serviceName}:${IMAGE_TAG}"
-                        echo "  [${serviceName}] 滚动更新..."
-                        sh "kubectl rollout restart deploy/${serviceName} -n ${K8S_NAMESPACE}"
-                        sh "kubectl rollout status deploy/${serviceName} -n ${K8S_NAMESPACE} --timeout=120s"
-                        echo "  [${serviceName}] ✅ 完成"
+                        echo "  [${serviceName}] 推送 ACR（唯一: ${UNIQUE_TAG}, 滚动: ${rollingTag}）..."
+                        sh "docker push ${REG}/${serviceName}:${UNIQUE_TAG}"
+                        sh "docker push ${REG}/${serviceName}:${rollingTag}"
                     }
 
-                    if (B_A > 0) { buildAndDeploy('ruoyi-auth', 'ruoyi-auth', 'auth') }
-                    if (B_G > 0) { buildAndDeploy('ruoyi-gateway', 'ruoyi-gateway', 'gateway') }
-                    if (B_S > 0) { buildAndDeploy('ruoyi-system', 'ruoyi-modules/ruoyi-system', 'modules/system') }
+                    // nginx 前端镜像
+                    if (B_UI > 0) {
+                        echo "  [nginx] 打包镜像..."
+                        sh 'mkdir -p docker/nginx/html && rm -rf docker/nginx/html/dist && cp -r ruoyi-ui/dist docker/nginx/html/dist'
+                        sh """
+                            docker build --no-cache \
+                                -t ${REG}/ruoyi-nginx:${UNIQUE_TAG} \
+                                -t ${REG}/ruoyi-nginx:latest \
+                                -f docker/nginx/dockerfile docker/nginx
+                        """
+                        echo "  [nginx] 推送 ACR（唯一: ${UNIQUE_TAG}, 滚动: latest）..."
+                        sh "docker push ${REG}/ruoyi-nginx:${UNIQUE_TAG}"
+                        sh "docker push ${REG}/ruoyi-nginx:latest"
+                    }
+
+                    // 后端微服务
+                    if (B_A > 0)   { buildAndDeploy('ruoyi-auth', 'ruoyi-auth', 'auth') }
+                    if (B_G > 0)   { buildAndDeploy('ruoyi-gateway', 'ruoyi-gateway', 'gateway') }
+                    if (B_S > 0)   { buildAndDeploy('ruoyi-system', 'ruoyi-modules/ruoyi-system', 'modules/system') }
+                    if (B_Gen > 0) { buildAndDeploy('ruoyi-gen', 'ruoyi-modules/ruoyi-gen', 'modules/gen') }
+                    if (B_Job > 0) { buildAndDeploy('ruoyi-job', 'ruoyi-modules/ruoyi-job', 'modules/job') }
+                    if (B_File> 0) { buildAndDeploy('ruoyi-file', 'ruoyi-modules/ruoyi-file', 'modules/file') }
+
+                    // Helm 统一部署
+                    if (B_UI > 0 || B_A > 0 || B_G > 0 || B_S > 0 || B_Gen > 0 || B_Job > 0 || B_File > 0) {
+                        echo "  [Helm] 滚动更新所有服务（imageTag: ${UNIQUE_TAG}）..."
+                        sh """
+                            helm upgrade ruoyi docker/k8s/charts/ruoyi-cloud -n ${K8S_NAMESPACE} \
+                                --set imageTag=${UNIQUE_TAG} \
+                                --set image.nginxTag=${UNIQUE_TAG} \
+                                --reuse-values
+                        """
+                        sh "kubectl rollout status deploy/ruoyi-gateway -n ${K8S_NAMESPACE} --timeout=120s"
+                        sh "kubectl rollout status deploy/ruoyi-system -n ${K8S_NAMESPACE} --timeout=120s"
+                        echo "  [Helm] ✅ 完成"
+                    }
                 }
             }
         }
@@ -216,6 +236,7 @@ pipeline {
         success {
             echo '============================================'
             echo "  Pipeline #${BUILD_NUMBER} 完成"
+            echo "  唯一标签: ${UNIQUE_TAG}"
             echo '============================================'
         }
         failure {

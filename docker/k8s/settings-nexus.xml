@@ -11,22 +11,27 @@
     <!-- 本地仓库路径（PVC 持久化缓存） -->
     <localRepository>/cache/m2</localRepository>
 
-    <!-- Nexus 镜像：所有请求统一走 Nexus -->
+    <!-- 阿里云镜像：下载依赖加速 -->
     <mirrors>
         <mirror>
-            <id>nexus</id>
-            <name>RuoYi Nexus Repository</name>
-            <url>http://ruoyi-nexus:8081/nexus/repository/maven-public/</url>
-            <mirrorOf>*</mirrorOf>
+            <id>aliyun</id>
+            <name>Aliyun Maven Mirror</name>
+            <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+            <mirrorOf>central,jcenter</mirrorOf>
         </mirror>
     </mirrors>
 
-    <!-- Nexus 账号（默认 admin / 首次启动自动生成密码） -->
+    <!-- 阿里云云效 Packages 凭据 -->
     <servers>
         <server>
-            <id>nexus</id>
-            <username>admin</username>
-            <password>admin123</password>
+            <id>repo-jbspy</id>
+            <username>6a30f9c3c52e4f7643285575</username>
+            <password>]sIXO)A2oT4k</password>
+        </server>
+        <server>
+            <id>repo-ykcyv</id>
+            <username>6a30f9c3c52e4f7643285575</username>
+            <password>]sIXO)A2oT4k</password>
         </server>
     </servers>
 

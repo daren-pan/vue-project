@@ -35,7 +35,7 @@ spec:
               service:
                 name: kibana
                 port:
-                  number: 5601
+                  number: 15601
           # 前端（/ 放最后，否则拦截所有请求）
           - path: /
             pathType: Prefix

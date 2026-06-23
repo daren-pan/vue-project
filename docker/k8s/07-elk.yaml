@@ -19,12 +19,11 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: elasticsearch-elk
   namespace: ruoyi
 spec:
-  serviceName: elasticsearch-elk
   replicas: 1
   selector:
     matchLabels:
@@ -34,9 +33,11 @@ spec:
       labels:
         app: elasticsearch-elk
     spec:
+      imagePullSecrets:
+        - name: acr-auth
       containers:
         - name: elasticsearch
-          image: elasticsearch:7.17.21
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/elasticsearch:7.17.21
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9200
@@ -58,15 +59,9 @@ spec:
             requests:
               memory: "1Gi"
               cpu: "250m"
-  volumeClaimTemplates:
-    - metadata:
-        name: es-data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 5Gi
+      volumes:
+        - name: es-data
+          emptyDir: {}
 
 ---
 # ==================== Logstash ====================
@@ -142,9 +137,11 @@ spec:
       labels:
         app: logstash
     spec:
+      imagePullSecrets:
+        - name: acr-auth
       containers:
         - name: logstash
-          image: logstash:7.17.0
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/logstash:7.17.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4560
@@ -216,9 +213,11 @@ spec:
       labels:
         app: kibana
     spec:
+      imagePullSecrets:
+        - name: acr-auth
       containers:
         - name: kibana
-          image: kibana:7.17.0
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/kibana:7.17.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5601

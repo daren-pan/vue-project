@@ -325,7 +325,7 @@ M_PID=""
 if [ -n "$M" ]; then
   echo "  [后端] Maven 编译: ${M#,}"
   docker run --rm -v /cache/m2:/root/.m2 -v /workspace:/workspace -w /workspace \
-    maven:3.9-eclipse-temurin-17 mvn -s docker/k8s/settings-nexus.xml clean package -DskipTests -pl ${M#,} -am &
+    maven:3.9-eclipse-temurin-17 mvn -s docker/k8s/settings-nexus.xml clean deploy -DskipTests -pl ${M#,} -am &
   M_PID=$!
 else
   echo "  [后端] 无变更，跳过 Maven"
@@ -334,7 +334,7 @@ fi
 if [ $B_UI -gt 0 ]; then
   echo "  [前端] npm 编译 + 构建镜像..."
   docker run --rm -v /cache/npm:/root/.npm -v /workspace/ruoyi-ui:/app -w /app \
-    node:18-alpine sh -c "npm install --registry=http://ruoyi-nexus:8081/nexus/repository/npm-public/ && npm run build:prod"
+    node:18-alpine sh -c "npm install --registry=https://registry.npmmirror.com && npm run build:prod"
   echo "  [前端] 编译完成"
 else
   echo "  [前端] 无变更，跳过"
