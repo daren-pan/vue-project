@@ -8,6 +8,8 @@ sources:
     name: Codeup源码
     endpoint: https://codeup.aliyun.com/6a31f41b5a46a9699cb73592/daren-pan/RuoYi-Cloud.git
     branch: springboot3
+    triggerEvents:
+      - push
     certificate:
       type: serviceConnection
       serviceConnection: j9zxaboxgwmqirft
