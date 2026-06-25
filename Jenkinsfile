@@ -137,28 +137,27 @@ pipeline {
         }
 
         // ============================================================
-        // 4. 构建镜像 + 推送 ACR + Helm 部署
+        // 4. 构建镜像 + 推送 ACR + kubectl 部署
         // ============================================================
         stage('Build, Push & Deploy') {
             steps {
                 echo '[4/5] 构建 & 部署...'
 
                 script {
-                    // 构建并推送：双标签（唯一标签 + 滚动标签）
-                    def buildAndDeploy = { serviceName, jarPath, dockerContext, extraTag = null ->
+                    // 构建并推送镜像
+                    def buildAndDeploy = { serviceName, jarPath, dockerContext ->
                         echo "  [${serviceName}] 打包镜像..."
                         sh "cp ${jarPath}/target/*.jar docker/ruoyi/${dockerContext}/jar/ 2>/dev/null || true"
-                        def rollingTag = extraTag ?: IMAGE_TAG
                         sh """
                             docker build \
                                 -t ${REG}/${serviceName}:${UNIQUE_TAG} \
-                                -t ${REG}/${serviceName}:${rollingTag} \
+                                -t ${REG}/${serviceName}:${IMAGE_TAG} \
                                 -f docker/ruoyi/${dockerContext}/dockerfile \
                                 docker/ruoyi/${dockerContext}
                         """
-                        echo "  [${serviceName}] 推送 ACR（唯一: ${UNIQUE_TAG}, 滚动: ${rollingTag}）..."
+                        echo "  [${serviceName}] 推送 ACR..."
                         sh "docker push ${REG}/${serviceName}:${UNIQUE_TAG}"
-                        sh "docker push ${REG}/${serviceName}:${rollingTag}"
+                        sh "docker push ${REG}/${serviceName}:${IMAGE_TAG}"
                     }
 
                     // nginx 前端镜像
@@ -171,7 +170,7 @@ pipeline {
                                 -t ${REG}/ruoyi-nginx:latest \
                                 -f docker/nginx/dockerfile docker/nginx
                         """
-                        echo "  [nginx] 推送 ACR（唯一: ${UNIQUE_TAG}, 滚动: latest）..."
+                        echo "  [nginx] 推送 ACR..."
                         sh "docker push ${REG}/ruoyi-nginx:${UNIQUE_TAG}"
                         sh "docker push ${REG}/ruoyi-nginx:latest"
                     }
@@ -184,18 +183,39 @@ pipeline {
                     if (B_Job > 0) { buildAndDeploy('ruoyi-job', 'ruoyi-modules/ruoyi-job', 'modules/job') }
                     if (B_File> 0) { buildAndDeploy('ruoyi-file', 'ruoyi-modules/ruoyi-file', 'modules/file') }
 
-                    // Helm 统一部署
+                    // kubectl 滚动更新部署
                     if (B_UI > 0 || B_A > 0 || B_G > 0 || B_S > 0 || B_Gen > 0 || B_Job > 0 || B_File > 0) {
-                        echo "  [Helm] 滚动更新所有服务（imageTag: ${UNIQUE_TAG}）..."
-                        sh """
-                            helm upgrade ruoyi docker/k8s/charts/ruoyi-cloud -n ${K8S_NAMESPACE} \
-                                --set imageTag=${UNIQUE_TAG} \
-                                --set image.nginxTag=${UNIQUE_TAG} \
-                                --reuse-values
-                        """
-                        sh "kubectl rollout status deploy/ruoyi-gateway -n ${K8S_NAMESPACE} --timeout=120s"
-                        sh "kubectl rollout status deploy/ruoyi-system -n ${K8S_NAMESPACE} --timeout=120s"
-                        echo "  [Helm] ✅ 完成"
+                        echo "  [kubectl] 滚动更新部署（imageTag: ${UNIQUE_TAG}）..."
+
+                        if (B_UI > 0) {
+                            sh "kubectl set image deploy/ruoyi-nginx nginx=${REG}/ruoyi-nginx:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-nginx -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_A > 0) {
+                            sh "kubectl set image deploy/ruoyi-auth auth=${REG}/ruoyi-auth:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-auth -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_G > 0) {
+                            sh "kubectl set image deploy/ruoyi-gateway gateway=${REG}/ruoyi-gateway:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-gateway -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_S > 0) {
+                            sh "kubectl set image deploy/ruoyi-system system=${REG}/ruoyi-system:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-system -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_Gen > 0) {
+                            sh "kubectl set image deploy/ruoyi-gen gen=${REG}/ruoyi-gen:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-gen -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_Job > 0) {
+                            sh "kubectl set image deploy/ruoyi-job job=${REG}/ruoyi-job:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-job -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        if (B_File > 0) {
+                            sh "kubectl set image deploy/ruoyi-file file=${REG}/ruoyi-file:${UNIQUE_TAG} -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deploy/ruoyi-file -n ${K8S_NAMESPACE} --timeout=120s"
+                        }
+                        echo "  [kubectl] ✅ 完成"
                     }
                 }
             }

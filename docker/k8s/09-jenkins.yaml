@@ -25,6 +25,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: alicloud-nas
   resources:
     requests:
       storage: 10Gi
@@ -38,6 +39,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: alicloud-nas
   resources:
     requests:
       storage: 5Gi
@@ -51,6 +53,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: alicloud-nas
   resources:
     requests:
       storage: 20Gi
@@ -72,53 +75,12 @@ spec:
         app: jenkins
     spec:
       serviceAccountName: jenkins
-      securityContext:
-        fsGroup: 1000
-      initContainers:
-        # 复制 docker CLI 到共享卷
-        - name: copy-docker
-          image: m.daocloud.io/docker.io/docker:cli
-          command: ["sh", "-c", "cp /usr/local/bin/docker /tools/"]
-          volumeMounts:
-            - name: tools
-              mountPath: /tools
-        # 复制 kubectl 到共享卷
-        - name: copy-kubectl
-          image: m.daocloud.io/docker.io/bitnami/kubectl:latest
-          command: ["sh", "-c", "cp /opt/bitnami/kubectl/bin/kubectl /tools/"]
-          volumeMounts:
-            - name: tools
-              mountPath: /tools
+      imagePullSecrets:
+        - name: acr-auth
       containers:
-        # Docker-in-Docker sidecar
-        - name: dind
-          image: docker:dind
-          args: ["--registry-mirror=https://docker.m.daocloud.io"]
-          securityContext:
-            privileged: true
-          env:
-            - name: DOCKER_TLS_CERTDIR
-              value: ""
-          ports:
-            - containerPort: 2375
-              name: docker
-          volumeMounts:
-            - name: docker-storage
-              mountPath: /var/lib/docker
-            - name: workspace
-              mountPath: /workspace
-            - name: build-cache
-              mountPath: /cache
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "2Gi"
-              cpu: "1000m"
         # Jenkins master
         - name: jenkins
-          image: jenkins/jenkins:lts-jdk17
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/jenkins:lts-jdk17
           ports:
             - containerPort: 8080
               name: http
@@ -129,17 +91,11 @@ spec:
               value: "-Djenkins.install.runSetupWizard=false -Dhudson.security.csrf.DefaultCrumbIssuer.EXCLUDE_SESSION_ID=true -Duser.timezone=Asia/Shanghai"
             - name: JENKINS_OPTS
               value: "--prefix=/jenkins"
-            - name: DOCKER_HOST
-              value: "tcp://localhost:2375"
             - name: TZ
               value: "Asia/Shanghai"
-            - name: PATH
-              value: "/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/tools"
           volumeMounts:
             - name: jenkins-data
               mountPath: /var/jenkins_home
-            - name: tools
-              mountPath: /tools
             - name: workspace
               mountPath: /workspace
             - name: build-cache
@@ -155,11 +111,6 @@ spec:
         - name: jenkins-data
           persistentVolumeClaim:
             claimName: jenkins-data
-        - name: docker-storage
-          persistentVolumeClaim:
-            claimName: dind-storage
-        - name: tools
-          emptyDir: {}
         - name: workspace
           emptyDir: {}
         - name: build-cache

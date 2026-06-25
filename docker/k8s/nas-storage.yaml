@@ -1,0 +1,11 @@
+# NAS StorageClass - 用于Serverless K8s持久化存储
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: alicloud-nas
+provisioner: nasplugin.csi.alibabacloud.com
+parameters:
+  server: 001rrchkb4zekt46j9u-vvl18.cn-hangzhou.nas.aliyuncs.com
+  path: /jenkins
+  vers: "3"
+reclaimPolicy: Retain
