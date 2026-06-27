@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruoyi-nginx
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: ruoyi-nginx
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruoyi-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ruoyi-nginx
+  template:
+    metadata:
+      labels:
+        app: ruoyi-nginx
+    spec:
+      imagePullSecrets:
+        - name: acr-auth
+      containers:
+        - name: nginx
+          image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/ruoyi-nginx:3.6.7
+          ports:
+            - containerPort: 80

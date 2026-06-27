@@ -1,0 +1,20 @@
+# ============================================================
+# Dev overlay: 开发环境
+# 用法: kubectl apply -k docker/k8s/overlays/dev
+# ============================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ruoyi-dev
+
+resources:
+  - namespace.yaml
+  - acr-auth.yaml
+  - ingress.yaml
+  - ../../base
+
+# 生成 ConfigMap，注入 SPRING_PROFILES_ACTIVE=dev
+configMapGenerator:
+  - name: app-profile
+    literals:
+      - SPRING_PROFILES_ACTIVE=dev

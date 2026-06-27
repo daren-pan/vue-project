@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: acr-auth
+  namespace: ruoyi-test
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJjcnBpLXp1NHRuYTl5OGRyZW56YzQuY24taGFuZ3pob3UucGVyc29uYWwuY3IuYWxpeXVuY3MuY29tIjp7InVzZXJuYW1lIjoi54ix56yR55qE5bCP55m9MTEiLCJwYXNzd29yZCI6ImNhaTEyMzQ1NiIsImF1dGgiOiI1NGl4NTZ5UjU1cUU1YkNQNTVtOU1URTZZMkZwTVRJek5EVTIifX19
