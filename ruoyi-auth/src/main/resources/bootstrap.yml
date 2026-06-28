@@ -17,11 +17,13 @@ spring:
         server-addr: ${NACOS_HOST:localhost}:8848
         username: nacos
         password: nacos
+        namespace: ${NACOS_NAMESPACE:}
       config:
         # 配置中心地址
         server-addr: ${NACOS_HOST:localhost}:8848
         username: nacos
         password: nacos
+        namespace: ${NACOS_NAMESPACE:}
         # 配置文件格式
         file-extension: yml
         # 共享配置
