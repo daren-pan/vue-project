@@ -43,4 +43,4 @@ spec:
               service:
                 name: ruoyi-nginx
                 port:
-                  number: 80
+                  number: 30080

@@ -62,16 +62,6 @@
 	<!-- Spring日志级别控制  -->
 	<logger name="org.springframework" level="warn" />
 
-    <!-- Logstash TCP Appender -->
-    <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>${LOGSTASH_HOST:-localhost}:${LOGSTASH_PORT:-4560}</destination>
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <customFields>{"service_name":"ruoyi-auth"}</customFields>
-        </encoder>
-        <keepAliveDuration>5 minutes</keepAliveDuration>
-        <connectionTimeout>10 seconds</connectionTimeout>
-    </appender>
-
 	<root level="info">
 		<appender-ref ref="console" />
 	</root>
@@ -80,6 +70,5 @@
     <root level="info">
         <appender-ref ref="file_info" />
         <appender-ref ref="file_error" />
-        <appender-ref ref="logstash" />
     </root>
 </configuration>
