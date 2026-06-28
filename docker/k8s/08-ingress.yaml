@@ -1,4 +1,23 @@
 ---
+# 跨命名空间引用 dev/test Nacos
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos-dev
+  namespace: ruoyi
+spec:
+  type: ExternalName
+  externalName: ruoyi-nacos.ruoyi-dev.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos-test
+  namespace: ruoyi
+spec:
+  type: ExternalName
+  externalName: ruoyi-nacos.ruoyi-test.svc.cluster.local
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,17 +26,34 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          # Nacos 控制台
+          # Nacos 控制台（ruoyi）
           - path: /nacos
             pathType: Prefix
             backend:
               service:
                 name: ruoyi-nacos
+                port:
+                  number: 8848
+          # Nacos 控制台（dev）
+          - path: /dev/nacos
+            pathType: Prefix
+            backend:
+              service:
+                name: nacos-dev
+                port:
+                  number: 8848
+          # Nacos 控制台（test）
+          - path: /test/nacos
+            pathType: Prefix
+            backend:
+              service:
+                name: nacos-test
                 port:
                   number: 8848
           # Jenkins

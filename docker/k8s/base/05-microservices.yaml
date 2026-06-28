@@ -195,6 +195,8 @@ spec:
           env:
             - name: NACOS_HOST
               value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+            - name: NACOS_NAMESPACE
+              value: "f75b4571-5566-4bea-8eea-c336597af08e"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT
