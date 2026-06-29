@@ -1,0 +1,12 @@
+# Dev 独立入口
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruoyi-nginx-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app: ruoyi-nginx
+  ports:
+    - port: 80
+      targetPort: 80

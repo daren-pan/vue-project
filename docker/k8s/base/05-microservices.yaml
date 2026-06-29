@@ -54,7 +54,7 @@ spec:
             - containerPort: 8080
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: REDIS_HOST
               value: "ruoyi-redis"
             - name: LOGSTASH_HOST
@@ -124,7 +124,7 @@ spec:
             - containerPort: 9200
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: REDIS_HOST
               value: "ruoyi-redis"
             - name: LOGSTASH_HOST
@@ -194,7 +194,7 @@ spec:
             - containerPort: 9201
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: NACOS_NAMESPACE
               value: "f75b4571-5566-4bea-8eea-c336597af08e"
             - name: DB_HOST
@@ -270,7 +270,7 @@ spec:
             - containerPort: 9202
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT
@@ -342,7 +342,7 @@ spec:
             - containerPort: 9203
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT
@@ -411,7 +411,7 @@ spec:
             - containerPort: 9300
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT
@@ -488,7 +488,7 @@ spec:
             - containerPort: 9100
           env:
             - name: NACOS_HOST
-              value: "ruoyi-nacos.ruoyi.svc.cluster.local"
+              value: "ruoyi-nacos"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT

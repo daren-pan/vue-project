@@ -1,6 +1,5 @@
 # ============================================================
 # Dev overlay: 开发环境
-# 用法: kubectl apply -k docker/k8s/overlays/dev
 # ============================================================
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -10,25 +9,20 @@ namespace: ruoyi-dev
 resources:
   - namespace.yaml
   - acr-auth.yaml
-  - ingress.yaml
+  - service-lb.yaml
   - ../../base
 
-# 生成 ConfigMap，注入环境变量
 configMapGenerator:
   - name: app-profile
     literals:
-      # 环境标识
       - SPRING_PROFILES_ACTIVE=dev
-      # Nacos 命名空间（指定 dev 命名空间读配置）
-      - spring.cloud.nacos.discovery.namespace=f75b4571-5566-4bea-8eea-c336597af08e
       - spring.cloud.nacos.config.namespace=f75b4571-5566-4bea-8eea-c336597af08e
-      # Redis 连接
-      - spring.data.redis.host=r-bp1nwyjw7nk1ng1il8.redis.rds.aliyuncs.com
-      - spring.data.redis.port=6379
-      - spring.data.redis.password=Cai@123456
-      # 动态数据源 - 主库
-      - spring.datasource.dynamic.primary=master
-      - spring.datasource.dynamic.datasource.master.driver-class-name=com.mysql.cj.jdbc.Driver
-      - spring.datasource.dynamic.datasource.master.url=jdbc:mysql://rm-bp1j67t523vb8tiye.mysql.rds.aliyuncs.com:3306/ry-cloud-dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
-      - spring.datasource.dynamic.datasource.master.username=root
-      - spring.datasource.dynamic.datasource.master.password=Cai@123456
+      - spring.cloud.nacos.config.timeout=30000
+      - SPRING_DATA_REDIS_HOST=r-bp1nwyjw7nk1ng1il8.redis.rds.aliyuncs.com
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=Cai@123456
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL=jdbc:mysql://rm-bp1j67t523vb8tiye.mysql.rds.aliyuncs.com:3306/ry-cloud-dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_USERNAME=root
+      - SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_PASSWORD=Cai@123456
