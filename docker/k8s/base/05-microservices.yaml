@@ -195,8 +195,6 @@ spec:
           env:
             - name: NACOS_HOST
               value: "ruoyi-nacos"
-            - name: NACOS_NAMESPACE
-              value: "f75b4571-5566-4bea-8eea-c336597af08e"
             - name: DB_HOST
               value: "ruoyi-mysql"
             - name: DB_PORT
@@ -236,7 +234,7 @@ metadata:
   name: ruoyi-gen
   namespace: ruoyi
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: ruoyi-gen
@@ -308,7 +306,7 @@ metadata:
   name: ruoyi-job
   namespace: ruoyi
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: ruoyi-job

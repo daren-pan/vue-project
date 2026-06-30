@@ -16,8 +16,9 @@ configMapGenerator:
   - name: app-profile
     literals:
       - SPRING_PROFILES_ACTIVE=dev
-      - spring.cloud.nacos.config.namespace=f75b4571-5566-4bea-8eea-c336597af08e
-      - spring.cloud.nacos.config.timeout=30000
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=f75b4571-5566-4bea-8eea-c336597af08e
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=f75b4571-5566-4bea-8eea-c336597af08e
+      - SPRING_CLOUD_NACOS_CONFIG_TIMEOUT=30000
       - SPRING_DATA_REDIS_HOST=r-bp1nwyjw7nk1ng1il8.redis.rds.aliyuncs.com
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_DATA_REDIS_PASSWORD=Cai@123456
