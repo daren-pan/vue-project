@@ -1,6 +1,9 @@
 ######################################################################
 # Build Tools
 
+# 本地开发配置（不要提交）
+**/application-dev.yml
+
 .gradle
 /build/
 !gradle/wrapper/gradle-wrapper.jar

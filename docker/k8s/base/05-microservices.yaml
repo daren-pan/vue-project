@@ -55,6 +55,8 @@ spec:
           env:
             - name: NACOS_HOST
               value: "ruoyi-nacos"
+            - name: SPRING_CLOUD_LOADBALANCER_ZONE
+              value: "local"
             - name: REDIS_HOST
               value: "ruoyi-redis"
             - name: LOGSTASH_HOST

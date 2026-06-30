@@ -1,0 +1,27 @@
+# 本地开发配置模板
+# 用法：cp application-dev.example.yml application-dev.yml，修改为自己的配置
+# application-dev.yml 已在 .gitignore 中，不会被提交
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848          # 需先执行 kubectl port-forward
+        namespace: f75b4571-5566-4bea-8eea-c336597af08e
+        register-enabled: true
+        metadata:
+          zone: local                         # 网关优先路由本地实例
+  datasource:
+    dynamic:
+      primary: master
+      datasource:
+        master:
+          url: jdbc:mysql://<RDS公网地址>:3306/ry-cloud-dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+          username: root
+          password: <你的密码>
+          driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: <Redis公网地址>
+      port: 6379
+      password: <你的密码>
