@@ -1,0 +1,13 @@
+# 本地开发 - 禁用 Nacos 配置中心
+# 用法：cp bootstrap-dev.example.yml bootstrap-dev.yml
+# bootstrap-dev.yml 已在 .gitignore 中
+
+spring:
+  cloud:
+    nacos:
+      config:
+        enabled: false
+      discovery:
+        namespace: ''
+        metadata:
+          zone: local

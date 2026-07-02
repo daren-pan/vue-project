@@ -1,14 +1,17 @@
 # 本地开发配置模板
 # 用法：cp application-dev.example.yml application-dev.yml，修改为自己的配置
-# application-dev.yml 已在 .gitignore 中，不会被提交
+# application-dev.yml / bootstrap-dev.yml 已在 .gitignore 中，不会被提交
+#
+# 本地需要先启动 Docker 中间件：
+#   docker run -d --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=你的密码 mysql:8.0
+#   docker run -d --name redis -p 6379:6379 redis:7 --requirepass 你的密码
+#   docker run -d --name nacos -p 8848:8848 -p 9848:9848 -e MODE=standalone nacos/nacos-server:v2.5.1
 
 spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848          # 需先执行 kubectl port-forward
-        namespace: f75b4571-5566-4bea-8eea-c336597af08e
-        register-enabled: true
+        namespace: ''                       # 空 = 使用 Nacos public 命名空间
         metadata:
           zone: local                         # 网关优先路由本地实例
   datasource:
@@ -16,12 +19,12 @@ spring:
       primary: master
       datasource:
         master:
-          url: jdbc:mysql://<RDS公网地址>:3306/ry-cloud-dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+          url: jdbc:mysql://localhost:3306/ry-cloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
           username: root
           password: <你的密码>
           driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: <Redis公网地址>
+      host: localhost
       port: 6379
       password: <你的密码>
