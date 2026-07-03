@@ -121,6 +121,9 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=nacos
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=nacos
@@ -149,6 +152,9 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-modules-job:
     container_name: ruoyi-modules-job
@@ -165,6 +171,10 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-modules-file:
     container_name: ruoyi-modules-file
@@ -179,6 +189,10 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-visual-monitor:
     container_name: ruoyi-visual-monitor
@@ -191,6 +205,10 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   elasticsearch:
     image: elasticsearch:7.17.0

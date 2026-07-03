@@ -1,9 +1,9 @@
-# ECS 自包含开发环境部署指南
+# ECS Docker Compose 部署指南
 
 ## 概述
 
-在 ECS 上用 Docker 自建中间件（MySQL + Redis + Nacos），直接 `mvn spring-boot:run` 启动微服务。
-适合本地开发调试，与 K8s 生产环境隔离。
+使用 Docker Compose 一键部署全套微服务（MySQL + Redis + Nacos + Gateway + Auth + System + Nginx）。
+适合 ECS 开发/测试环境，与 K8s 生产环境隔离。
 
 ## 环境要求
 
@@ -14,125 +14,115 @@
 apt update && apt install -y openjdk-21-jdk maven git docker.io
 ```
 
-## 1. 启动中间件
-
-### MySQL
-
-```bash
-docker run -d --name mysql -p 3306:3306 \
-  -e MYSQL_ROOT_PASSWORD=Cai@123456 \
-  mysql:8.0
-```
-
-### Redis
-
-```bash
-docker run -d --name redis -p 6379:6379 \
-  redis:7 --requirepass Cai@123456
-```
-
-### Nacos
-
-```bash
-# 先生成 JWT 密钥
-SECRET_KEY=$(openssl rand -base64 32)
-
-docker run -d --name nacos \
-  --link mysql:mysql \
-  -p 8848:8848 -p 9848:9848 \
-  -e MODE=standalone \
-  -e SPRING_DATASOURCE_PLATFORM=mysql \
-  -e MYSQL_SERVICE_HOST=mysql \
-  -e MYSQL_SERVICE_PORT=3306 \
-  -e MYSQL_SERVICE_DB_NAME=ry-config \
-  -e MYSQL_SERVICE_USER=root \
-  -e MYSQL_SERVICE_PASSWORD=Cai@123456 \
-  -e MYSQL_SERVICE_DB_PARAM="allowPublicKeyRetrieval=true&useSSL=false" \
-  -e NACOS_AUTH_ENABLE=true \
-  -e NACOS_AUTH_TOKEN_EXPIRE_SECONDS=18000 \
-  -e NACOS_AUTH_TOKEN="${SECRET_KEY}" \
-  nacos/nacos-server:v2.5.1
-```
-
-## 2. 初始化数据库
-
-```bash
-# Nacos 配置库
-docker exec -i mysql mysql -uroot -pCai@123456 < docker/mysql/db/ry_config_20250902.sql
-
-# 业务库
-docker exec -i mysql mysql -uroot -pCai@123456 -e "CREATE DATABASE IF NOT EXISTS \`ry-cloud\` DEFAULT CHARACTER SET utf8mb4;"
-docker exec -i mysql mysql -uroot -pCai@123456 ry-cloud < sql/ry_20250523.sql
-docker exec -i mysql mysql -uroot -pCai@123456 ry-cloud < sql/quartz.sql
-docker exec -i mysql mysql -uroot -pCai@123456 ry-cloud < sql/migrations/wf_tables.sql
-
-# MySQL root 远程权限（Docker 网桥连接需要）
-docker exec -i mysql mysql -uroot -pCai@123456 -e \
-  "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'Cai@123456'; FLUSH PRIVILEGES;"
-```
-
-## 3. 拉代码 + 配置
+## 1. 拉代码
 
 ```bash
 git clone <repo-url> ~/RuoYi-Cloud
-cd ~/RuoYi-Cloud
-
-# 3 个模块都要从模板复制配置
-for module in ruoyi-auth ruoyi-gateway; do
-  cp $module/src/main/resources/bootstrap-dev.example.yml \
-     $module/src/main/resources/bootstrap-dev.yml
-  cp $module/src/main/resources/application-dev.example.yml \
-     $module/src/main/resources/application-dev.yml
-done
-
-cp ruoyi-modules/ruoyi-system/src/main/resources/bootstrap-dev.example.yml \
-   ruoyi-modules/ruoyi-system/src/main/resources/bootstrap-dev.yml
-cp ruoyi-modules/ruoyi-system/src/main/resources/application-dev.example.yml \
-   ruoyi-modules/ruoyi-system/src/main/resources/application-dev.yml
-
-# 修改密码（模板里是 <你的密码>）
-find ~/RuoYi-Cloud -name "application-dev.yml" -exec sed -i 's/<你的密码>/Cai@123456/g' {} \;
+cd ~/RuoYi-Cloud/docker
 ```
 
-## 4. 编译 & 启动
+## 2. 编译 & 复制 jar
 
 ```bash
-# 全量编译
-cd ~/RuoYi-Cloud && mvn clean install -DskipTests
+# 回到项目根目录编译
+cd ~/RuoYi-Cloud
+mvn clean package -DskipTests
 
-# 后台启动（按顺序：auth → gateway → system）
-nohup mvn spring-boot:run -pl ruoyi-auth -Dspring-boot.run.profiles=dev > ~/ruoyi-auth.log 2>&1 &
-sleep 20
-nohup mvn spring-boot:run -pl ruoyi-gateway -Dspring-boot.run.profiles=dev > ~/ruoyi-gateway.log 2>&1 &
-nohup mvn spring-boot:run -pl ruoyi-modules/ruoyi-system -Dspring-boot.run.profiles=dev > ~/ruoyi-system.log 2>&1 &
+# 复制 jar 到 docker 部署目录
+cd docker && sh copy.sh
 ```
+
+## 3. 构建镜像 & 启动
+
+```bash
+# 构建所有服务镜像
+docker compose build
+
+# 启动所有服务
+docker compose up -d
+```
+
+## 4. 启动后配置 Nacos
+
+Nacos 启动后，需要配置各模块的数据源 URL，使用占位符适配 Docker 容器网络：
+
+1. 浏览器打开 `http://<ECS公网IP>:8848/nacos/`，登录（nacos/nacos）
+2. 配置管理 → 配置列表 → 编辑 `ruoyi-system-dev.yml`，数据源 URL 改为：
+
+```yaml
+datasource:
+  master:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/ry-cloud?...
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
+```
+
+3. 同理编辑 `ruoyi-gen-dev.yml`、`ruoyi-job-dev.yml`、`ruoyi-file-dev.yml`、`ruoyi-visual-monitor-dev.yml`
+
+> docker-compose.yml 中已设置 `DB_HOST=ruoyi-mysql`、`DB_USER=root`、`DB_PASSWORD=你的密码`，Nacos 占位符会自动注入。
 
 ## 5. 验证
 
 ```bash
-# 端口检查（应看到 9200, 8080, 9201）
-ss -tlnp | grep java
+docker compose ps                                    # 所有服务应 Up
+curl -s http://localhost:8080/auth/login             # 预期 {"code":401}
+curl -s http://localhost:81                         # 前端页面
 
-# 接口检查
-curl -s http://localhost:8080/auth/login
-# 预期: {"code":401,"msg":"令牌不能为空"}
+# 查看日志
+docker compose logs -f ruoyi-modules-system          # system 日志
+docker compose logs --tail 50 ruoyi-nacos            # Nacos 日志
+```
 
-curl -s http://localhost:9201/system/user/list | head -3
+## 常用命令
+
+```bash
+# 在 docker/ 目录下操作
+cd ~/RuoYi-Cloud/docker
+
+# 查看状态
+docker compose ps
+
+# 重启某个服务
+docker compose restart ruoyi-modules-system
+
+# 重新编译部署某个服务
+cd ~/RuoYi-Cloud && mvn package -DskipTests -pl ruoyi-modules/ruoyi-system -am
+cd docker && sh copy.sh
+docker compose up -d --build ruoyi-modules-system
+
+# 停止/删除
+docker compose stop
+docker compose down
+```
+
+## 访问地址
+
+| 服务 | 地址 |
+|------|------|
+| 前端 | `http://<ECS公网IP>:81` |
+| Nacos | `http://<ECS公网IP>:8848/nacos/` |
+| Gateway | `http://<ECS公网IP>:8080` |
+| Auth | `http://<ECS公网IP>:9200` |
+| System | `http://<ECS公网IP>:9301` |
+
+> 需要安全组开放对应端口
+
+## 配置原理
+
+```
+Docker Compose:
+  docker-compose.yml → env vars 注入（DB_HOST, REDIS_HOST 等）
+    ↓
+  bootstrap.yml → 连 Nacos → 拉 ruoyi-*-dev.yml
+    ↓
+  Nacos 配置中 ${DB_HOST} 占位符 → Docker 环境变量自动填充
 ```
 
 ## 常见问题
 
 | 问题 | 解决 |
 |------|------|
-| Nacos JWT 密钥缺失 | 启动时设置 `NACOS_AUTH_TOKEN`，长度 ≥32 字节 base64 |
-| MySQL Public Key Retrieval | 连接串加 `allowPublicKeyRetrieval=true`，Nacos 通过 `MYSQL_SERVICE_DB_PARAM` 追加 |
-| 编译 target=17 失败 | 安装 JDK 21：`apt install openjdk-21-jdk` |
-| `root@172.17.0.1` Access Denied | Docker 网桥需要 `root@'%'` 授权 |
-| Nacos 共享配置覆盖本地数据源 | 用 `bootstrap-dev.yml` 设置 `config.enabled: false` |
-
-## 配置原理
-
-```
-🍀 ECS/本地开发:  bootstrap.yml → bootstrap-dev.yml(关Nacos config) → application-dev.yml(localhost)
-☸️ K8s 生产:     bootstrap.yml → Nacos 配置中心 → env vars 注入
-```
+| Nacos JWT 密钥缺失 | `docker-compose.yml` 已预设 `NACOS_AUTH_TOKEN` |
+| MySQL Access Denied | `docker exec ruoyi-mysql mysql -uroot -p -e "GRANT ALL ON *.* TO 'root'@'%' IDENTIFIED BY '密码';"` |
+| 容器名冲突 | `docker compose down && docker compose up -d` |
+| 端口冲突 | 修改 `docker-compose.yml` 中的 `ports` 映射 |
