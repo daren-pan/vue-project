@@ -49,6 +49,9 @@ docker/**/data/
 docker/skywalking/
 logs/
 
+# Local environment override (not tracked)
+local-env.yml
+
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml

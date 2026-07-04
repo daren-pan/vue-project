@@ -4,6 +4,8 @@ server:
 
 # Spring
 spring: 
+  config:
+    import: optional:file:./local-env.yml
   application:
     # 应用名称
     name: ruoyi-gateway
