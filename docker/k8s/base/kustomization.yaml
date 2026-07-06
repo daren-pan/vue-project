@@ -5,4 +5,3 @@ kind: Kustomization
 resources:
   - 04-nacos.yaml
   - 05-microservices.yaml
-  - 06-nginx.yaml

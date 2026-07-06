@@ -4,8 +4,8 @@
 
 | 环境 | 前端 | Nacos |
 |------|------|-------|
-| dev | http://121.199.13.17 | http://121.199.13.17/nacos/ |
-| test | http://121.40.29.76 | http://121.40.29.76/nacos/ |
+| dev | http://47.99.220.14 | http://47.99.220.14/nacos/ |
+| test | NodePort（待启用 LoadBalancer） | 同上 |
 
 > Nacos 地址末尾 `/` 不可省略
 

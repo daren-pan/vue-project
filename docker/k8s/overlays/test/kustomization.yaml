@@ -9,7 +9,7 @@ namespace: ruoyi-test
 resources:
   - namespace.yaml
   - acr-auth.yaml
-  - service-lb.yaml
+  - nginx.yaml
   - ../../base
 
 configMapGenerator:
