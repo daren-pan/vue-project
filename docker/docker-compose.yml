@@ -1,4 +1,4 @@
-version : '3.8'
+﻿version : '3.8'
 services:
   ruoyi-nacos:
     container_name: ruoyi-nacos
@@ -51,9 +51,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ./redis/conf/redis.conf:/home/ruoyi/redis/redis.conf:ro
       - redis-data:/data
-    command: redis-server /home/ruoyi/redis/redis.conf --dir /data
     restart: unless-stopped
   ruoyi-nginx:
     container_name: ruoyi-nginx
@@ -121,8 +119,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=nacos
@@ -131,11 +129,11 @@ services:
       - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=nacos
       - SPRING_CLOUD_NACOS_DISCOVERY_WEIGHT=1
       # 添加 SkyWalking Agent 配置
-      - JAVA_OPTS=-javaagent:/sw-agent/skywalking-agent.jar -Dskywalking.agent.service_name=ruoyi-modules-system
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=oap:11800
-    volumes:
+      #- JAVA_OPTS=-javaagent:/sw-agent/skywalking-agent.jar -Dskywalking.agent.service_name=ruoyi-modules-system
+      #- SW_AGENT_COLLECTOR_BACKEND_SERVICES=oap:11800
+    #volumes:
       # 挂载宿主机上的 skywalking-agent 目录到容器的 /sw-agent
-      - ./skywalking/skywalking-agent:/sw-agent
+      #- ./skywalking/skywalking-agent:/sw-agent
   ruoyi-modules-gen:
     container_name: ruoyi-modules-gen
     image: docker-ruoyi-modules-gen:3.6.7
@@ -152,8 +150,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-modules-job:
@@ -172,8 +170,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-modules-file:
@@ -190,8 +188,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   ruoyi-visual-monitor:
@@ -206,8 +204,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - DB_HOST=ruoyi-mysql
       - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
   elasticsearch:

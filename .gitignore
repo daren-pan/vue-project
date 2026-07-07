@@ -51,6 +51,7 @@ logs/
 
 # Local environment override (not tracked)
 local-env.yml
+docker/.env
 
 !*/build/*.java
 !*/build/*.html
