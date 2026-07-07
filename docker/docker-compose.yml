@@ -288,8 +288,6 @@ services:
     image: jenkins/jenkins:lts-jdk17
     user: root
     restart: always
-    environment:
-      - TZ=Asia/Shanghai
     ports:
       - "8081:8080"
       - "50000:50000"
