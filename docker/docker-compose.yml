@@ -289,7 +289,7 @@ services:
     user: root
     restart: always
     environment:
-      - JAVA_OPTS=-Duser.timezone=Asia/Shanghai
+      - TZ=Asia/Shanghai
     ports:
       - "8081:8080"
       - "50000:50000"
