@@ -284,6 +284,23 @@ services:
     depends_on:
       - elasticsearch-elk
 
+  # ========== Jenkins CI/CD ==========
+  jenkins:
+    container_name: ruoyi-jenkins
+    image: jenkins/jenkins:lts-jdk17
+    user: root
+    restart: always
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.kube/config:/root/.kube/config
+      - /usr/local/bin/kubectl:/usr/local/bin/kubectl
+      - /usr/bin/docker:/usr/bin/docker
+
 volumes:
     redis-data:
     elk-es-data:
+    jenkins-data:
