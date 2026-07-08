@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'maven-3.9'
+    }
+
     environment {
         ACR_REGISTRY = 'crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com'
         ACR_NAMESPACE = 'ruoyi-personal'
@@ -55,7 +59,7 @@ pipeline {
         // ============================================================
         stage('■ 2/4 编译') {
             parallel {
-                stage('└ Maven 后端') {
+                stage('Maven 后端') {
                     when { expression { env.CHANGED_AUTH == 'true' || env.CHANGED_GATE == 'true' || env.CHANGED_SYS == 'true' || env.CHANGED_GEN == 'true' || env.CHANGED_JOB == 'true' || env.CHANGED_FILE == 'true' } }
                     steps {
                         echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
@@ -75,7 +79,7 @@ pipeline {
                         echo '  ✅ Maven 编译完成'
                     }
                 }
-                stage('└ npm 前端') {
+                stage('npm 前端') {
                     when { expression { env.CHANGED_UI == 'true' } }
                     steps {
                         echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
@@ -141,12 +145,25 @@ pipeline {
         stage('■ 4/4 部署到 K8s') {
             steps {
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                echo '  🚀 kubectl 部署到 ACS...'
+                echo '  🚀 更新镜像并部署...'
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                withEnv(['KUBECONFIG=/root/.kube/config']) {
-                    sh 'kubectl apply -k docker/k8s/overlays/dev --validate=false'
+
+                script {
+                    def setImage = { deployName, containerName ->
+                        echo "  📤 ${deployName} → ${env.UNIQUE_TAG}"
+                        sh "kubectl set image deploy/${deployName} -n ruoyi-dev ${containerName}=${REG}/${deployName}:${env.UNIQUE_TAG}"
+                        sh "kubectl rollout status deploy/${deployName} -n ruoyi-dev --timeout=120s"
+                    }
+
+                    if (env.CHANGED_UI   == 'true') setImage('ruoyi-nginx', 'nginx')
+                    if (env.CHANGED_AUTH == 'true') setImage('ruoyi-auth', 'auth')
+                    if (env.CHANGED_GATE == 'true') setImage('ruoyi-gateway', 'gateway')
+                    if (env.CHANGED_SYS  == 'true') setImage('ruoyi-system', 'system')
+                    if (env.CHANGED_GEN  == 'true') setImage('ruoyi-gen', 'gen')
+                    if (env.CHANGED_JOB  == 'true') setImage('ruoyi-job', 'job')
+                    if (env.CHANGED_FILE == 'true') setImage('ruoyi-file', 'file')
                 }
-                echo '  ✅ 部署完成'
+                echo '  ✅ 全部部署完成'
             }
         }
     }
