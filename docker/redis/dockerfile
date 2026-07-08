@@ -9,5 +9,4 @@ VOLUME /home/ruoyi/redis
 RUN mkdir -p /home/ruoyi/redis
 # 指定路径
 WORKDIR /home/ruoyi/redis
-# 复制conf文件到路径
-COPY ./conf/redis.conf /home/ruoyi/redis/redis.conf
+

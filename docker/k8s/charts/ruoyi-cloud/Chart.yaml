@@ -1,6 +1,0 @@
-apiVersion: v2
-name: ruoyi-cloud
-description: RuoYi-Cloud 微服务系统 Helm Chart
-type: application
-version: 0.1.0
-appVersion: "3.6.7"
