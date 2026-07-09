@@ -84,6 +84,7 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - REDIS_HOST=ruoyi-redis
+      - SENTINEL_DASHBOARD=ruoyi-sentinel:8858
   ruoyi-auth:
     container_name: ruoyi-auth
     image: docker-ruoyi-auth:3.6.7
@@ -244,6 +245,17 @@ services:
       - "8090:8080"
     environment:
       - SW_OAP_ADDRESS=http://oap:12800
+
+  # ========== Sentinel 流量治理 ==========
+  ruoyi-sentinel:
+    container_name: ruoyi-sentinel
+    image: bladex/sentinel-dashboard:1.8.6
+    restart: always
+    ports:
+      - "8718:8858"
+    environment:
+      - SENTINEL_AUTH_USERNAME=sentinel
+      - SENTINEL_AUTH_PASSWORD=sentinel
 
     # ========== ELK 日志系统 ==========
   elasticsearch-elk:

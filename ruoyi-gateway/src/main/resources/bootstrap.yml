@@ -38,8 +38,8 @@ spring:
       # 取消控制台懒加载
       eager: true
       transport:
-        # 控制台地址
-        dashboard: 127.0.0.1:8718
+        # 控制台地址（Docker Compose 通过环境变量 SENTINEL_DASHBOARD 覆盖）
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
       # nacos配置持久化
       datasource:
         ds1:
