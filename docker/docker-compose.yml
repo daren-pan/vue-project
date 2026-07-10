@@ -249,7 +249,7 @@ services:
   # ========== Sentinel 流量治理 ==========
   ruoyi-sentinel:
     container_name: ruoyi-sentinel
-    image: bladex/sentinel-dashboard:1.8.6
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/sentinel-dashboard:1.8.6
     restart: always
     ports:
       - "8718:8858"
