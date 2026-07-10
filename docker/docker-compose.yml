@@ -253,9 +253,6 @@ services:
     restart: always
     ports:
       - "8718:8858"
-    environment:
-      - SENTINEL_AUTH_USERNAME=sentinel
-      - SENTINEL_AUTH_PASSWORD=sentinel
 
     # ========== ELK 日志系统 ==========
   elasticsearch-elk:
