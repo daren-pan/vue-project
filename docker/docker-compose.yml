@@ -298,6 +298,7 @@ services:
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=/certs
+      - DOCKER_TLS_SAN=DNS:dind
     volumes:
       - dind-certs:/certs
       - dind-data:/var/lib/docker
