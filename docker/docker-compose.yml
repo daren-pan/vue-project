@@ -302,6 +302,7 @@ services:
     volumes:
       - dind-certs:/certs
       - dind-data:/var/lib/docker
+      - ./dind-daemon.json:/etc/docker/daemon.json:ro
 
   # ========== Jenkins CI/CD ==========
   jenkins:
