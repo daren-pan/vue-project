@@ -290,6 +290,18 @@ services:
     depends_on:
       - elasticsearch-elk
 
+  # ========== Docker-in-Docker（安全的 Docker 构建环境）==========
+  dind:
+    container_name: ruoyi-dind
+    image: docker:27-dind
+    restart: always
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - dind-certs:/certs
+      - dind-data:/var/lib/docker
+
   # ========== Jenkins CI/CD ==========
   jenkins:
     container_name: ruoyi-jenkins
@@ -298,10 +310,13 @@ services:
     ports:
       - "8081:8080"
       - "50000:50000"
+    environment:
+      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_CERT_PATH=/certs/client
     volumes:
       - jenkins-data:/var/jenkins_home
-      # 注意：移除了 docker.sock 挂载以防止容器逃逸
-      # 如需在 Pipeline 中构建镜像，请使用 Docker-in-Docker (DinD) 方案
+      - dind-certs:/certs/client
       - ${HOME}/.kube/config:/root/.kube/config
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       - /usr/bin/docker:/usr/bin/docker
@@ -310,3 +325,5 @@ volumes:
     redis-data:
     elk-es-data:
     jenkins-data:
+    dind-certs:
+    dind-data:
