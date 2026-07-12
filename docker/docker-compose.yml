@@ -316,7 +316,7 @@ services:
       - DOCKER_CERT_PATH=/certs/client
     volumes:
       - jenkins-data:/var/jenkins_home
-      - dind-certs:/certs/client
+      - dind-certs:/certs:ro
       - ${HOME}/.kube/config:/root/.kube/config
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       - /usr/bin/docker:/usr/bin/docker
