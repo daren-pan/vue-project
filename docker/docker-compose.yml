@@ -316,10 +316,11 @@ services:
       - DOCKER_HOST=tcp://dind:2376
       - DOCKER_TLS_VERIFY=1
       - DOCKER_CERT_PATH=/certs/client
+      - KUBECONFIG=/var/jenkins_home/.kube/config
     volumes:
       - jenkins-data:/var/jenkins_home
       - dind-certs:/certs:ro
-      - ${HOME}/.kube/config:/root/.kube/config
+      - ${HOME}/.kube/config:/var/jenkins_home/.kube/config
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       - /usr/bin/docker:/usr/bin/docker
 
