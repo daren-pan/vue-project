@@ -108,7 +108,6 @@ services:
       dockerfile: dockerfile
     ports:
       - "9301:9301"
-      - "5005:5005"
     depends_on:
       - ruoyi-redis
       - ruoyi-mysql
@@ -295,14 +294,14 @@ services:
   jenkins:
     container_name: ruoyi-jenkins
     image: jenkins/jenkins:lts-jdk17
-    user: root
     restart: always
     ports:
       - "8081:8080"
       - "50000:50000"
     volumes:
       - jenkins-data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      # 注意：移除了 docker.sock 挂载以防止容器逃逸
+      # 如需在 Pipeline 中构建镜像，请使用 Docker-in-Docker (DinD) 方案
       - ${HOME}/.kube/config:/root/.kube/config
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       - /usr/bin/docker:/usr/bin/docker
