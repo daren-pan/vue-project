@@ -293,7 +293,7 @@ services:
   # ========== Docker-in-Docker（安全的 Docker 构建环境）==========
   dind:
     container_name: ruoyi-dind
-    image: docker:27-dind
+    image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/docker:27-dind
     restart: always
     privileged: true
     environment:
