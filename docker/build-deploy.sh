@@ -69,17 +69,33 @@ build_frontend() {
 # ============================================================
 copy_artifacts() {
     log "📋 复制构建产物..."
-    cp "$PROJECT_DIR/ruoyi-gateway/target/ruoyi-gateway.jar"                       "$SCRIPT_DIR/ruoyi/gateway/jar/"
-    cp "$PROJECT_DIR/ruoyi-auth/target/ruoyi-auth.jar"                             "$SCRIPT_DIR/ruoyi/auth/jar/"
-    cp "$PROJECT_DIR/ruoyi-modules/ruoyi-system/target/ruoyi-modules-system.jar"   "$SCRIPT_DIR/ruoyi/modules/system/jar/"
-    cp "$PROJECT_DIR/ruoyi-modules/ruoyi-gen/target/ruoyi-modules-gen.jar"         "$SCRIPT_DIR/ruoyi/modules/gen/jar/"
-    cp "$PROJECT_DIR/ruoyi-modules/ruoyi-job/target/ruoyi-modules-job.jar"         "$SCRIPT_DIR/ruoyi/modules/job/jar/"
-    cp "$PROJECT_DIR/ruoyi-modules/ruoyi-file/target/ruoyi-modules-file.jar"       "$SCRIPT_DIR/ruoyi/modules/file/jar/"
-    cp "$PROJECT_DIR/ruoyi-visual/ruoyi-monitor/target/ruoyi-visual-monitor.jar"   "$SCRIPT_DIR/ruoyi/visual/monitor/jar/"
-    mkdir -p "$SCRIPT_DIR/nginx/html/dist"
-    rm -rf "$SCRIPT_DIR/nginx/html/dist/"*
-    cp -r "$PROJECT_DIR/ruoyi-ui/dist/"* "$SCRIPT_DIR/nginx/html/dist/"
-    log "✅ 产物复制完成"
+    local copied=0
+    local failed=0
+
+    _cp() {
+        if [ -f "$1" ]; then
+            cp "$1" "$2" && copied=$((copied + 1)) || failed=$((failed + 1))
+        else
+            warn "   跳过 $1（未编译）"
+        fi
+    }
+
+    _cp "$PROJECT_DIR/ruoyi-gateway/target/ruoyi-gateway.jar"                     "$SCRIPT_DIR/ruoyi/gateway/jar/"
+    _cp "$PROJECT_DIR/ruoyi-auth/target/ruoyi-auth.jar"                           "$SCRIPT_DIR/ruoyi/auth/jar/"
+    _cp "$PROJECT_DIR/ruoyi-modules/ruoyi-system/target/ruoyi-modules-system.jar" "$SCRIPT_DIR/ruoyi/modules/system/jar/"
+    _cp "$PROJECT_DIR/ruoyi-modules/ruoyi-gen/target/ruoyi-modules-gen.jar"       "$SCRIPT_DIR/ruoyi/modules/gen/jar/"
+    _cp "$PROJECT_DIR/ruoyi-modules/ruoyi-job/target/ruoyi-modules-job.jar"       "$SCRIPT_DIR/ruoyi/modules/job/jar/"
+    _cp "$PROJECT_DIR/ruoyi-modules/ruoyi-file/target/ruoyi-modules-file.jar"     "$SCRIPT_DIR/ruoyi/modules/file/jar/"
+    _cp "$PROJECT_DIR/ruoyi-visual/ruoyi-monitor/target/ruoyi-visual-monitor.jar" "$SCRIPT_DIR/ruoyi/visual/monitor/jar/"
+
+    # 前端 dist
+    if [ -d "$PROJECT_DIR/ruoyi-ui/dist" ]; then
+        mkdir -p "$SCRIPT_DIR/nginx/html/dist"
+        rm -rf "$SCRIPT_DIR/nginx/html/dist/"*
+        cp -r "$PROJECT_DIR/ruoyi-ui/dist/"* "$SCRIPT_DIR/nginx/html/dist/"
+    fi
+
+    log "✅ 产物复制完成（成功: $copied, 跳过: $failed）"
 }
 
 # ============================================================
@@ -91,16 +107,14 @@ start_base() {
     cd "$SCRIPT_DIR"
 
     # MySQL 先启，等就绪
-    docker compose up -d --force-recreate ruoyi-mysql
-    wait_for ruoyi-mysql 90 || true
+    docker compose up -d ruoyi-mysql
+    wait_for ruoyi-mysql 30 || true
 
-    # Redis 依赖 MySQL（实际不依赖，但保持顺序）
-    docker compose up -d --force-recreate ruoyi-redis
+    docker compose up -d ruoyi-redis
     wait_for ruoyi-redis 30 || true
 
-    # Nacos 依赖 MySQL，必须等 MySQL 就绪后才能连接
-    docker compose up -d --force-recreate ruoyi-nacos
-    wait_for ruoyi-nacos 90 || true
+    docker compose up -d ruoyi-nacos
+    wait_for ruoyi-nacos 30 || true
 
     log "✅ 基础服务全部就绪"
 }
@@ -111,7 +125,7 @@ start_base() {
 start_modules() {
     log "🚀 启动业务模块..."
     cd "$SCRIPT_DIR"
-    docker compose up -d --force-recreate \
+    docker compose up -d --build \
         ruoyi-nginx \
         ruoyi-gateway \
         ruoyi-auth \
