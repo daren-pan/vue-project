@@ -1,5 +1,5 @@
 # ============================================================
-# Dev 环境 Nginx（ConfigMap + Deployment + LoadBalancer）
+# Dev 环境 Nginx（ConfigMap + Deployment + Service）
 # ============================================================
 
 ---
@@ -57,6 +57,8 @@ spec:
     metadata:
       labels:
         app: ruoyi-nginx
+      annotations:
+        k8s.aliyun.com/eci-eip-instance-id: "eip-bp187lp5z2wperyczbxv9"   # 绑定已有 EIP
     spec:
       imagePullSecrets:
         - name: acr-auth
@@ -81,9 +83,10 @@ kind: Service
 metadata:
   name: ruoyi-nginx
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: ruoyi-nginx
   ports:
     - port: 80
       targetPort: 80
+      nodePort: 30081

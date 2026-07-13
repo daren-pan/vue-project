@@ -101,9 +101,13 @@ docker compose down
 |------|------|
 | 前端 | `http://<ECS公网IP>:81` |
 | Nacos | `http://<ECS公网IP>:8848/nacos/` |
+| Sentinel | `http://<ECS公网IP>:8718` |
 | Gateway | `http://<ECS公网IP>:8080` |
 | Auth | `http://<ECS公网IP>:9200` |
 | System | `http://<ECS公网IP>:9301` |
+| Jenkins | `http://<ECS公网IP>:8081` |
+| SkyWalking | `http://<ECS公网IP>:8090` |
+| Kibana | `http://<ECS公网IP>:5601` |
 
 > 需要安全组开放对应端口
 
