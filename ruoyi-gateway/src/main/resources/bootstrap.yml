@@ -20,14 +20,14 @@ spring:
       discovery:
         # 服务注册地址
         server-addr: ${NACOS_HOST:localhost}:8848
-        username: nacos
-        password: nacos
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
         namespace: ${NACOS_NAMESPACE:}
       config:
         # 配置中心地址
         server-addr: ${NACOS_HOST:localhost}:8848
-        username: nacos
-        password: nacos
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
         namespace: ${NACOS_NAMESPACE:}
         # 配置文件格式
         file-extension: yml
@@ -45,8 +45,8 @@ spring:
         ds1:
           nacos:
             server-addr: ${NACOS_HOST:localhost}:8848
-            username: nacos
-            password: nacos
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
             dataId: sentinel-ruoyi-gateway
             groupId: DEFAULT_GROUP
             data-type: json

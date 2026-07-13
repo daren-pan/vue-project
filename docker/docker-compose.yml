@@ -10,9 +10,11 @@ services:
       - JVM_XMX=1g
       - JVM_XMS=256m
       - NACOS_AUTH_ENABLE=true
-      - NACOS_AUTH_TOKEN=EbejS4ILlIZicDHDQc6R2rcgRuanjOq8Olqyx1lwLMY=
-      - NACOS_AUTH_IDENTITY_KEY=admin
-      - NACOS_AUTH_IDENTITY_VALUE=security
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-EbejS4ILlIZicDHDQc6R2rcgRuanjOq8Olqyx1lwLMY=}
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY:-admin}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE:-security}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
     mem_limit: 1.5g
     volumes:
       - ./nacos/logs/:/home/nacos/logs
@@ -45,7 +47,7 @@ services:
         ]
     environment:
       MYSQL_DATABASE: 'ry-cloud'
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
   ruoyi-redis:
     container_name: ruoyi-redis
     image: redis
@@ -88,6 +90,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - REDIS_HOST=ruoyi-redis
       - SENTINEL_DASHBOARD=ruoyi-sentinel:8858
+      - NACOS_USERNAME=${NACOS_USERNAME}
+      - NACOS_PASSWORD=${NACOS_PASSWORD}
       - JAVA_OPTS=-Xmx384m -Xms256m
     mem_limit: 640m
   ruoyi-auth:
@@ -105,6 +109,8 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - REDIS_HOST=ruoyi-redis
+      - NACOS_USERNAME=${NACOS_USERNAME}
+      - NACOS_PASSWORD=${NACOS_PASSWORD}
       - JAVA_OPTS=-Xmx384m -Xms256m
     mem_limit: 640m
   ruoyi-modules-system:
@@ -130,10 +136,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
-      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=nacos
-      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=nacos
-      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=nacos
-      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=nacos
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
       - SPRING_CLOUD_NACOS_DISCOVERY_WEIGHT=1
       - JAVA_OPTS=-Xmx384m -Xms256m
     mem_limit: 640m
@@ -163,6 +167,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - NACOS_USERNAME=${NACOS_USERNAME}
+      - NACOS_PASSWORD=${NACOS_PASSWORD}
       - JAVA_OPTS=-Xmx256m -Xms128m
     mem_limit: 448m
   ruoyi-modules-job:
@@ -185,6 +191,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - NACOS_USERNAME=${NACOS_USERNAME}
+      - NACOS_PASSWORD=${NACOS_PASSWORD}
       - JAVA_OPTS=-Xmx256m -Xms128m
     mem_limit: 448m
   ruoyi-modules-file:
@@ -205,6 +213,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - NACOS_USERNAME=${NACOS_USERNAME}
+      - NACOS_PASSWORD=${NACOS_PASSWORD}
       - JAVA_OPTS=-Xmx256m -Xms128m
     mem_limit: 448m
   ruoyi-visual-monitor:
