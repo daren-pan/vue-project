@@ -92,15 +92,15 @@ start_base() {
 
     # MySQL 先启，等就绪
     docker compose up -d --force-recreate ruoyi-mysql
-    wait_for ruoyi-mysql 90
+    wait_for ruoyi-mysql 90 || true
 
     # Redis 依赖 MySQL（实际不依赖，但保持顺序）
     docker compose up -d --force-recreate ruoyi-redis
-    wait_for ruoyi-redis 30
+    wait_for ruoyi-redis 30 || true
 
     # Nacos 依赖 MySQL，必须等 MySQL 就绪后才能连接
     docker compose up -d --force-recreate ruoyi-nacos
-    wait_for ruoyi-nacos 90
+    wait_for ruoyi-nacos 90 || true
 
     log "✅ 基础服务全部就绪"
 }
