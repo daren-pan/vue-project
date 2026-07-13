@@ -7,13 +7,13 @@ services:
       context: ./nacos
     environment:
       - MODE=standalone
-      - JVM_XMX=512m
+      - JVM_XMX=1g
       - JVM_XMS=256m
       - NACOS_AUTH_ENABLE=true
       - NACOS_AUTH_TOKEN=EbejS4ILlIZicDHDQc6R2rcgRuanjOq8Olqyx1lwLMY=
       - NACOS_AUTH_IDENTITY_KEY=admin
       - NACOS_AUTH_IDENTITY_VALUE=security
-    mem_limit: 768m
+    mem_limit: 1.5g
     volumes:
       - ./nacos/logs/:/home/nacos/logs
       - ./nacos/conf/application.properties:/home/nacos/conf/application.properties
