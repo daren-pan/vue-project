@@ -57,8 +57,6 @@ spec:
     metadata:
       labels:
         app: ruoyi-nginx
-      annotations:
-        k8s.aliyun.com/eci-eip-instance-id: "eip-bp187lp5z2wperyczbxv9"   # 绑定已有 EIP
     spec:
       imagePullSecrets:
         - name: acr-auth

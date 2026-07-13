@@ -2,10 +2,10 @@
 
 ## 访问地址
 
-| 环境 | 前端 | Nacos | Sentinel |
+| 环境 | 前端 | Nacos | 访问方式 |
 |------|------|-------|----------|
-| dev | http://101.37.254.163 | http://101.37.254.163/nacos/ | http://101.37.254.163:8718 |
-| test | http://47.99.220.14:30080 | http://47.99.220.14/nacos/ | — |
+| dev | http://localhost:8070 | http://localhost:8070/nacos/ | `kubectl port-forward -n ruoyi-dev svc/ruoyi-nginx 8070:80` |
+| test | http://47.99.220.14:30080 | http://47.99.220.14/nacos/ | 公网直达 |
 
 > Nacos 地址末尾 `/` 不可省略
 > Sentinel 初始账号: sentinel/sentinel
@@ -20,7 +20,7 @@
 
 ## 架构说明
 
-- **dev (ACS K8s)**: 弹性容器集群，Nginx 通过 EIP 直绑 Pod 对外服务
+- **dev (ACS K8s)**: 弹性容器集群，通过 kubectl port-forward 本地访问
 - **test (ECS Compose)**: 单机 Docker Compose，完整微服务栈 + Jenkins CI/CD
 
 ## 部署
