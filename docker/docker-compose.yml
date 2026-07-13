@@ -7,10 +7,13 @@ services:
       context: ./nacos
     environment:
       - MODE=standalone
+      - JVM_XMX=512m
+      - JVM_XMS=256m
       - NACOS_AUTH_ENABLE=true
       - NACOS_AUTH_TOKEN=EbejS4ILlIZicDHDQc6R2rcgRuanjOq8Olqyx1lwLMY=
       - NACOS_AUTH_IDENTITY_KEY=admin
       - NACOS_AUTH_IDENTITY_VALUE=security
+    mem_limit: 768m
     volumes:
       - ./nacos/logs/:/home/nacos/logs
       - ./nacos/conf/application.properties:/home/nacos/conf/application.properties
@@ -85,6 +88,8 @@ services:
       - NACOS_HOST=ruoyi-nacos
       - REDIS_HOST=ruoyi-redis
       - SENTINEL_DASHBOARD=ruoyi-sentinel:8858
+      - JAVA_OPTS=-Xmx384m -Xms256m
+    mem_limit: 640m
   ruoyi-auth:
     container_name: ruoyi-auth
     image: docker-ruoyi-auth:3.6.7
@@ -100,6 +105,8 @@ services:
     environment:
       - NACOS_HOST=ruoyi-nacos
       - REDIS_HOST=ruoyi-redis
+      - JAVA_OPTS=-Xmx384m -Xms256m
+    mem_limit: 640m
   ruoyi-modules-system:
     container_name: ruoyi-modules-system
     image: docker-ruoyi-modules-system:3.6.7
@@ -128,6 +135,8 @@ services:
       - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=nacos
       - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=nacos
       - SPRING_CLOUD_NACOS_DISCOVERY_WEIGHT=1
+      - JAVA_OPTS=-Xmx384m -Xms256m
+    mem_limit: 640m
       # 添加 SkyWalking Agent 配置
       #- JAVA_OPTS=-javaagent:/sw-agent/skywalking-agent.jar -Dskywalking.agent.service_name=ruoyi-modules-system
       #- SW_AGENT_COLLECTOR_BACKEND_SERVICES=oap:11800
@@ -154,6 +163,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - JAVA_OPTS=-Xmx256m -Xms128m
+    mem_limit: 448m
   ruoyi-modules-job:
     container_name: ruoyi-modules-job
     image: docker-ruoyi-modules-job:3.6.7
@@ -174,6 +185,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - JAVA_OPTS=-Xmx256m -Xms128m
+    mem_limit: 448m
   ruoyi-modules-file:
     container_name: ruoyi-modules-file
     image: docker-ruoyi-modules-file:3.6.7
@@ -192,6 +205,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - JAVA_OPTS=-Xmx256m -Xms128m
+    mem_limit: 448m
   ruoyi-visual-monitor:
     container_name: ruoyi-visual-monitor
     image: docker-ruoyi-visual-monitor:3.6.7
@@ -208,10 +223,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - SPRING_DATASOURCE_DYNAMIC_PRIMARY=master
       - REDIS_HOST=ruoyi-redis
+      - JAVA_OPTS=-Xmx256m -Xms128m
+    mem_limit: 448m
   elasticsearch:
     image: elasticsearch:7.17.0
     container_name: ruoyi-skywalking-es
     restart: always
+    mem_limit: 1g
     ports:
       - "9300:9200"
     environment:
@@ -250,6 +268,7 @@ services:
     container_name: ruoyi-sentinel
     image: crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com/ruoyi-personal/sentinel-dashboard:1.8.6
     restart: always
+    mem_limit: 384m
     ports:
       - "8718:8858"
 
@@ -258,6 +277,7 @@ services:
     image: elasticsearch:7.17.0
     container_name: ruoyi-elk-es
     restart: always
+    mem_limit: 1g
     ports:
       - "9400:9200"
       - "9401:9300"
