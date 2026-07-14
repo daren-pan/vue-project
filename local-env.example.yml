@@ -13,6 +13,11 @@ DB_USER: root
 DB_PASSWORD: password
 REDIS_HOST: localhost
 
+# ===== 命名空间隔离（多人开发时设置）=====
+# 在 Nacos 控制台创建自己的命名空间，复制 ID 填到这里
+# NACOS_DISCOVERY_NAMESPACE: your-namespace-id
+# NACOS_CONFIG_NAMESPACE:           # 留空=读公共配置
+
 # ===== 远程 ECS 环境 =====
 # NACOS_HOST: 47.99.146.187
 # DB_HOST: 47.99.146.187
