@@ -62,6 +62,9 @@
 	<!-- Spring日志级别控制  -->
 	<logger name="org.springframework" level="warn" />
 
+    <!-- Druid SQL 日志输出（完整 SQL） -->
+	<logger name="druid.sql.Statement" level="DEBUG"/>
+
 	<root level="info">
 		<appender-ref ref="console" />
 	</root>

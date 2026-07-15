@@ -1,13 +1,18 @@
 package com.ruoyi.auth.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import com.ruoyi.auth.config.AuthRabbitmqConfig;
 import com.ruoyi.common.core.constant.CacheConstants;
 import com.ruoyi.common.core.constant.Constants;
 import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.core.constant.UserConstants;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.enums.UserStatus;
+import com.ruoyi.common.core.event.LoginEvent;
 import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.text.Convert;
 import com.ruoyi.common.core.utils.DateUtils;
@@ -27,6 +32,8 @@ import com.ruoyi.system.api.model.LoginUser;
 @Component
 public class SysLoginService
 {
+    private static final Logger log = LoggerFactory.getLogger(SysLoginService.class);
+
     @Autowired
     private RemoteUserService remoteUserService;
 
@@ -38,6 +45,9 @@ public class SysLoginService
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired(required = false)
+    private RabbitTemplate rabbitTemplate;
 
     /**
      * 登录
@@ -92,9 +102,38 @@ public class SysLoginService
             throw new ServiceException("对不起，您的账号：" + username + " 已停用");
         }
         passwordService.validate(user, password);
-        recordLogService.recordLogininfor(username, Constants.LOGIN_SUCCESS, "登录成功");
-        recordLoginInfo(user.getUserId());
+
+        // 登录成功 — 异步发布事件（MQ 可用时），降级为同步 Feign 调用
+        LoginEvent event = new LoginEvent(Constants.LOGIN_SUCCESS, username,
+                IpUtils.getIpAddr(), "登录成功");
+        event.setUserId(user.getUserId());
+        publishLoginEvent(event);
+
         return userInfo;
+    }
+
+    /**
+     * 发布登录事件：优先走 MQ 异步，MQ 不可用时降级为同步 Feign
+     */
+    private void publishLoginEvent(LoginEvent event) {
+        if (rabbitTemplate != null) {
+            try {
+                rabbitTemplate.convertAndSend(
+                        AuthRabbitmqConfig.EXCHANGE_AUTH,
+                        AuthRabbitmqConfig.ROUTING_LOGIN,
+                        event);
+                log.debug("登录事件已发送到MQ: {}", event);
+                return;
+            } catch (Exception e) {
+                log.warn("MQ 不可用，降级为同步写日志: {}", e.getMessage());
+            }
+        }
+        // 降级：同步 Feign 写日志 + 更新用户登录信息
+        recordLogService.recordLogininfor(event.getUsername(),
+                event.getEventType(), event.getMessage());
+        if (event.getUserId() != null) {
+            recordLoginInfo(event.getUserId());
+        }
     }
 
     /**

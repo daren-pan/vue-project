@@ -57,6 +57,19 @@
     volumes:
       - redis-data:/data
     restart: unless-stopped
+  # RabbitMQ 消息队列
+  ruoyi-rabbitmq:
+    container_name: ruoyi-rabbitmq
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"      # AMQP 协议端口
+      - "15672:15672"    # Web 管理界面
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-ruoyi}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ruoyi123}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
   ruoyi-nginx:
     container_name: ruoyi-nginx
     image: ruoyi-nginx:latest
@@ -383,6 +396,7 @@
 
 volumes:
     redis-data:
+    rabbitmq-data:
     elk-es-data:
     jenkins-data:
     dind-certs:
