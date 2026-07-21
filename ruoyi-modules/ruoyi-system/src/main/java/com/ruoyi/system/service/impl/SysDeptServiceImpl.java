@@ -38,11 +38,17 @@ import com.ruoyi.system.service.ISysDeptService;
 public class SysDeptServiceImpl implements ISysDeptService
 {
     private static final Logger log = LoggerFactory.getLogger(SysDeptServiceImpl.class);
+
+    private static final String DEPT_TREE_CACHE_KEY = "dept:tree";
+
     @Autowired
     private SysDeptMapper deptMapper;
 
     @Autowired
     private SysRoleMapper roleMapper;
+
+    @Autowired
+    private RedisService redisService;
 
     /**
      * 查询部门管理数据
@@ -66,8 +72,23 @@ public class SysDeptServiceImpl implements ISysDeptService
     @Override
     public List<TreeSelect> selectDeptTreeList(SysDept dept)
     {
+        // 先查 Redis 缓存
+        List<TreeSelect> cached = redisService.getCacheObject(DEPT_TREE_CACHE_KEY);
+        if (cached != null) {
+            return cached;
+        }
+        // 缓存未命中，查库 + 构建树 + 写缓存
         List<SysDept> depts = SpringUtils.getAopProxy(this).selectDeptList(dept);
-        return buildDeptTreeSelect(depts);
+        List<TreeSelect> tree = buildDeptTreeSelect(depts);
+        redisService.setCacheObject(DEPT_TREE_CACHE_KEY, tree, 30L, java.util.concurrent.TimeUnit.MINUTES);
+        return tree;
+    }
+
+    /**
+     * 清除部门树缓存（部门增删改时调用）
+     */
+    private void evictDeptCache() {
+        redisService.deleteObject(DEPT_TREE_CACHE_KEY);
     }
 
     /**
@@ -227,7 +248,9 @@ public class SysDeptServiceImpl implements ISysDeptService
             throw new ServiceException("部门停用，不允许新增");
         }
         dept.setAncestors(info.getAncestors() + "," + dept.getParentId());
-        return deptMapper.insertDept(dept);
+        int result = deptMapper.insertDept(dept);
+        evictDeptCache();
+        return result;
     }
 
     /**
@@ -255,6 +278,7 @@ public class SysDeptServiceImpl implements ISysDeptService
             // 如果该部门是启用状态，则启用该部门的所有上级部门
             updateParentDeptStatusNormal(dept);
         }
+        evictDeptCache();
         return result;
     }
 
@@ -299,7 +323,9 @@ public class SysDeptServiceImpl implements ISysDeptService
     @Override
     public int deleteDeptById(Long deptId)
     {
-        return deptMapper.deleteDeptById(deptId);
+        int result = deptMapper.deleteDeptById(deptId);
+        evictDeptCache();
+        return result;
     }
 
     /**

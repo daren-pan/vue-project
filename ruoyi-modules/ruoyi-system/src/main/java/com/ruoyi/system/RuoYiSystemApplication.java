@@ -16,7 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @EnableCustomConfig
 @EnableRyFeignClients
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.ruoyi")
 @EnableAsync
 @EnableScheduling
 @MapperScan({"com.ruoyi.system.mapper", "com.ruoyi.system.mapper.workflow"})

@@ -48,7 +48,7 @@ public class LoginEventConsumer {
             }
         } catch (Exception e) {
             log.error("处理登录事件失败: {}", event, e);
-            throw e;
+            throw e; // 抛出异常触发重试，最终进死信队列
         }
     }
 

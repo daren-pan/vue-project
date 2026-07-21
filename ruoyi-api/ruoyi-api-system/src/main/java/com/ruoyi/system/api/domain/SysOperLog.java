@@ -83,6 +83,9 @@ public class SysOperLog extends BaseEntity
     @Excel(name = "消耗时间", suffix = "毫秒")
     private Long costTime;
 
+    /** 调用链追踪ID */
+    private String traceId;
+
     public Long getOperId()
     {
         return operId;
@@ -251,5 +254,15 @@ public class SysOperLog extends BaseEntity
     public void setCostTime(Long costTime)
     {
         this.costTime = costTime;
+    }
+
+    public String getTraceId()
+    {
+        return traceId;
+    }
+
+    public void setTraceId(String traceId)
+    {
+        this.traceId = traceId;
     }
 }

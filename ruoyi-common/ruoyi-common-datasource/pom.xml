@@ -31,5 +31,22 @@
             <version>${dynamic-ds.version}</version>
         </dependency>
 
+        <!-- RabbitMQ（可选，用于数据变更审计） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.19</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>ruoyi-common-security</artifactId>
+        </dependency>
+
     </dependencies>
 </project>

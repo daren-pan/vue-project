@@ -435,11 +435,31 @@ create table sys_oper_log (
   error_msg         varchar(2000)   default ''                 comment '错误消息',
   oper_time         datetime                                   comment '操作时间',
   cost_time         bigint(20)      default 0                  comment '消耗时间',
+  trace_id          varchar(64)     default null               comment '调用链追踪ID',
   primary key (oper_id),
   key idx_sys_oper_log_bt (business_type),
   key idx_sys_oper_log_s  (status),
   key idx_sys_oper_log_ot (oper_time)
 ) engine=innodb auto_increment=100 comment = '操作日志记录';
+
+
+-- ----------------------------
+-- 10.1、数据变更审计日志
+-- ----------------------------
+drop table if exists sys_audit_log;
+create table sys_audit_log (
+  id            bigint(20)      not null auto_increment    comment '主键',
+  action        varchar(10)     default null               comment '操作类型（INSERT/UPDATE/DELETE）',
+  sql_text      text            default null               comment '完整SQL（含参数值）',
+  method_name   varchar(255)    default null               comment 'Mapper方法全限定名',
+  operator      varchar(50)     default null               comment '操作人',
+  trace_id      varchar(64)     default null               comment '调用链追踪ID',
+  operate_time  datetime        default null               comment '操作时间',
+  primary key (id),
+  key idx_sys_audit_log_action (action),
+  key idx_sys_audit_log_trace_id (trace_id),
+  key idx_sys_audit_log_operate_time (operate_time)
+) engine=innodb auto_increment=1 comment = '数据变更审计日志';
 
 
 -- ----------------------------

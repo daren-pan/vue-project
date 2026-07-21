@@ -19,6 +19,9 @@
             <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
               <!-- 表头第一行 -->
               <div class="query-form-row">
+                <el-form-item label="部门" prop="deptId">
+                  <treeselect v-model="queryParams.deptId" :options="enabledDeptOptions" :show-count="true" placeholder="请选择部门" style="width: 240px" @input="handleQuery" />
+                </el-form-item>
                 <el-form-item label="用户名称" prop="userName">
                   <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 240px" @keyup.enter.native="handleQuery" />
                 </el-form-item>

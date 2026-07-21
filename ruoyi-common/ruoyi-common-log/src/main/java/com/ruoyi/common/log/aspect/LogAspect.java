@@ -2,6 +2,8 @@ package com.ruoyi.common.log.aspect;
 
 import java.util.Collection;
 import java.util.Map;
+
+import com.ruoyi.common.core.utils.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.ArrayUtils;
@@ -22,7 +24,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ruoyi.common.core.text.Convert;
 import com.ruoyi.common.core.utils.ExceptionUtil;
 import com.ruoyi.common.core.utils.ServletUtils;
-import com.ruoyi.common.core.utils.StringUtils;
+import com.ruoyi.common.core.utils.TraceIdUtil;
 import com.ruoyi.common.core.utils.ip.IpUtils;
 import com.ruoyi.common.log.annotation.Log;
 import com.ruoyi.common.log.enums.BusinessStatus;
@@ -118,6 +120,8 @@ public class LogAspect
             getControllerMethodDescription(joinPoint, controllerLog, operLog, jsonResult);
             // 设置消耗时间
             operLog.setCostTime(System.currentTimeMillis() - TIME_THREADLOCAL.get());
+            // 设置调用链追踪ID
+            operLog.setTraceId(TraceIdUtil.getTraceId());
             // 保存数据库
             asyncLogService.saveSysLog(operLog);
         }
