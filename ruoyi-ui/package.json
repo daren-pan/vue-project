@@ -26,6 +26,8 @@
   "dependencies": {
     "@riophae/vue-treeselect": "0.4.0",
     "axios": "0.28.1",
+    "bpmn-auto-layout": "^2.0.0-alpha.1",
+    "bpmn-js": "^17.11.1",
     "clipboard": "2.0.8",
     "core-js": "3.37.1",
     "echarts": "5.4.0",

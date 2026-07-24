@@ -1,0 +1,2 @@
+# 此文件仅为占位，确保 jar 目录被 Git 跟踪
+# 实际 jar 由 copy.sh 脚本从 target/ 目录复制过来

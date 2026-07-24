@@ -105,7 +105,7 @@ export const constantRoutes = [
         meta: { title: '流程定义', icon: 'list', permissions: ['workflow:definition:list'] }
       },
       {
-        path: 'config/:id(\\d+)',
+        path: 'config',
         component: () => import('@/views/workflow/config/index'),
         name: 'WorkflowConfig',
         hidden: true,

@@ -130,6 +130,7 @@ start_modules() {
         ruoyi-gateway \
         ruoyi-auth \
         ruoyi-modules-system \
+        ruoyi-modules-workflow \
         ruoyi-sentinel
     log "✅ 业务模块已启动"
 }

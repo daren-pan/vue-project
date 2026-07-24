@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             typeLanguage="http://www.w3.org/2001/XMLSchema"
+             expressionLanguage="http://www.w3.org/1999/XPath"
+             targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="leave" name="请假审批" isExecutable="true">
+
+        <startEvent id="start" name="开始" flowable:formFieldValidation="true"/>
+
+        <userTask id="managerApprove" name="部门经理审批"
+                  flowable:assignee="${manager}"
+                  flowable:formFieldValidation="true"/>
+
+        <exclusiveGateway id="gateway1" name="判断天数"/>
+
+        <userTask id="directorApprove" name="总监审批"
+                  flowable:assignee="${director}"
+                  flowable:formFieldValidation="true"/>
+
+        <exclusiveGateway id="gateway2" name="合并"/>
+
+        <endEvent id="end" name="结束"/>
+
+        <sequenceFlow id="flow1" sourceRef="start" targetRef="managerApprove"/>
+        <sequenceFlow id="flow2" sourceRef="managerApprove" targetRef="gateway1"/>
+
+        <sequenceFlow id="flow3" sourceRef="gateway1" targetRef="end" name="&lt;=3天">
+            <conditionExpression xsi:type="tFormalExpression">${days &lt;= 3}</conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow id="flow4" sourceRef="gateway1" targetRef="directorApprove" name="&gt;3天">
+            <conditionExpression xsi:type="tFormalExpression">${days &gt; 3}</conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow id="flow5" sourceRef="directorApprove" targetRef="gateway2"/>
+        <sequenceFlow id="flow6" sourceRef="gateway2" targetRef="end"/>
+
+    </process>
+
+</definitions>

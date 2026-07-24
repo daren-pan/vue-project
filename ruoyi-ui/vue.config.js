@@ -25,7 +25,7 @@ module.exports = {
   assetsDir: 'static',
   // 如果你不需要生产环境的 source map，可以将其设置为 false 以加速生产环境构建。
   productionSourceMap: true,
-  transpileDependencies: ['quill'],
+  transpileDependencies: ['quill', 'bpmn-js', 'diagram-js', 'diagram-js-direct-editing', 'min-dom', 'domify', 'bpmn-auto-layout'],
   // webpack-dev-server 相关配置
     devServer: {
     host: '0.0.0.0',
@@ -77,9 +77,13 @@ module.exports = {
       })
     ],
   },
+
   chainWebpack(config) {
-    config.plugins.delete('preload') // TODO: need test
-    config.plugins.delete('prefetch') // TODO: need test
+    config.plugins.delete('preload')
+    config.plugins.delete('prefetch')
+
+    // babel 也编译 .cjs 文件（解决 bpmn-auto-layout 等新语法问题）
+    config.module.rule('js').test(/\.(js|cjs|mjs)$/)
 
     // set svg-sprite-loader
     config.module

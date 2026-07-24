@@ -2,19 +2,13 @@
   <div class="app-container">
     <!-- 搜索表单 -->
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="80px">
-      <el-form-item label="待办人" prop="assignee">
+      <el-form-item label="审批人" prop="assignee">
         <el-input
           v-model="queryParams.assignee"
-          placeholder="请输入用户名"
+          placeholder="请输入审批人用户名"
           clearable
           @keyup.enter.native="handleQuery"
         />
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-          <el-option label="待办" value="pending" />
-          <el-option label="已完成" value="completed" />
-        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
@@ -25,86 +19,93 @@
     <!-- 操作按钮栏 -->
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="el-icon-refresh"
-          size="mini"
-          @click="getList"
-        >刷新</el-button>
+        <el-button type="primary" plain icon="el-icon-refresh" size="mini" @click="handleQuery">刷新</el-button>
       </el-col>
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="el-icon-plus" size="mini" @click="handleStartLeave">发起请假</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" @queryTable="handleQuery"></right-toolbar>
     </el-row>
 
-    <!-- 数据表格 -->
-    <el-table v-loading="loading" :data="taskList">
-      <el-table-column label="任务ID" align="center" prop="id" width="80" />
-      <el-table-column label="节点名称" align="center" prop="nodeName" width="150" />
-      <el-table-column label="发起人" align="center" prop="applicant" width="100" />
-      <el-table-column label="待办人" align="center" prop="assignee" width="100" />
-      <el-table-column label="业务单据" align="center" min-width="200">
-        <template slot-scope="scope">
-          <span>{{ scope.row.businessTable }} - {{ scope.row.businessKey }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" align="center" prop="status" width="100">
-        <template slot-scope="scope">
-          <el-tag :type="scope.row.status === 'pending' ? 'warning' : 'success'" size="mini">
-            {{ scope.row.status === 'pending' ? '待审批' : '已完成' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="160">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
-        <template slot-scope="scope">
-          <el-button
-            v-if="scope.row.status === 'pending'"
-            size="mini"
-            type="primary"
-            icon="el-icon-check"
-            @click="handleApprove(scope.row)"
-          >审批</el-button>
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-tickets"
-            @click="handleHistory(scope.row)"
-          >轨迹</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <!-- Tab 切换：待办 / 已办 -->
+    <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+      <el-tab-pane label="待办任务" name="todo">
+        <el-table v-loading="loading" :data="todoList" border stripe>
+          <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
+          <el-table-column label="申请人" align="center" width="100">
+            <template slot-scope="scope">
+              {{ scope.row.variables.applicant || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="请假天数" align="center" width="100">
+            <template slot-scope="scope">
+              <el-tag type="warning" size="mini">{{ scope.row.variables.days }} 天</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
+          <el-table-column label="创建时间" align="center" width="170">
+            <template slot-scope="scope">
+              {{ parseTime(scope.row.createTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" align="center" width="220">
+            <template slot-scope="scope">
+              <el-button size="mini" type="primary" icon="el-icon-check" @click="handleApprove(scope.row)">审批</el-button>
+              <el-button size="mini" type="text" icon="el-icon-tickets" @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="todoList.length === 0 && !loading" style="text-align:center;color:#999;padding:40px;">
+          暂无待办任务
+        </div>
+      </el-tab-pane>
 
-    <!-- 分页 -->
-    <pagination
-      v-show="total>0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
+      <el-tab-pane label="已办历史" name="history">
+        <el-table v-loading="loading" :data="historyList" border stripe>
+          <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
+          <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
+          <el-table-column label="开始时间" align="center" width="170">
+            <template slot-scope="scope">
+              {{ parseTime(scope.row.startTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="结束时间" align="center" width="170">
+            <template slot-scope="scope">
+              {{ parseTime(scope.row.endTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="耗时" align="center" width="100">
+            <template slot-scope="scope">
+              {{ formatDuration(scope.row.duration) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" align="center" width="100">
+            <template slot-scope="scope">
+              <el-button size="mini" type="text" icon="el-icon-tickets" @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="historyList.length === 0 && !loading" style="text-align:center;color:#999;padding:40px;">
+          暂无已办记录
+        </div>
+      </el-tab-pane>
+    </el-tabs>
 
-    <!-- 审批操作对话框 -->
-    <el-dialog title="审批" :visible.sync="approveOpen" width="550px" append-to-body>
+    <!-- 审批对话框 -->
+    <el-dialog title="审批任务" :visible.sync="approveOpen" width="550px" append-to-body>
       <el-form ref="approveForm" :model="approveForm" label-width="80px">
-        <el-form-item label="节点">
-          <el-tag type="primary" size="medium">{{ currentTask.nodeName }}</el-tag>
+        <el-form-item label="任务名称">
+          <el-tag type="primary" size="medium">{{ currentTask.taskName }}</el-tag>
         </el-form-item>
-        <el-form-item label="发起人">
-          <span>{{ currentTask.applicant }}</span>
+        <el-form-item label="申请人">
+          <span>{{ currentTask.variables.applicant || '-' }}</span>
         </el-form-item>
-        <el-form-item label="业务信息">
-          <span>{{ currentTask.businessTable }} - {{ currentTask.businessKey }}</span>
-          <el-button type="text" size="small" @click="viewBusinessDetail(currentTask)">
-            查看详情
-          </el-button>
+        <el-form-item label="请假天数">
+          <el-tag type="warning" size="mini">{{ currentTask.variables.days }} 天</el-tag>
         </el-form-item>
         <el-form-item label="操作">
           <el-radio-group v-model="approveForm.action">
-            <el-radio label="agree" style="color: #67C23A;">同意</el-radio>
+            <el-radio label="approve" style="color: #67C23A;">同意</el-radio>
             <el-radio label="reject" style="color: #F56C6C;">驳回</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -113,7 +114,7 @@
             v-model="approveForm.comment"
             type="textarea"
             :rows="3"
-            placeholder="请输入审批意见（可选）"
+            :placeholder="approveForm.action === 'approve' ? '请输入审批意见（可选）' : '请输入驳回原因'"
           />
         </el-form-item>
       </el-form>
@@ -123,170 +124,191 @@
       </div>
     </el-dialog>
 
+    <!-- 发起请假对话框 -->
+    <el-dialog title="发起请假" :visible.sync="leaveOpen" width="500px" append-to-body>
+      <el-form ref="leaveForm" :model="leaveForm" :rules="leaveRules" label-width="100px">
+        <el-form-item label="申请人" prop="applicant">
+          <el-input v-model="leaveForm.applicant" placeholder="请输入申请人" />
+        </el-form-item>
+        <el-form-item label="请假天数" prop="days">
+          <el-input-number v-model="leaveForm.days" :min="1" :max="30" />
+          <span style="margin-left:10px;color:#999;">>3天需总监审批</span>
+        </el-form-item>
+        <el-form-item label="部门经理" prop="manager">
+          <el-input v-model="leaveForm.manager" placeholder="请输入部门经理用户名" />
+        </el-form-item>
+        <el-form-item label="总监" prop="director">
+          <el-input v-model="leaveForm.director" placeholder=">3天时需填写" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitLeave">发 起</el-button>
+        <el-button @click="leaveOpen = false">取 消</el-button>
+      </div>
+    </el-dialog>
+
     <!-- 审批轨迹对话框 -->
-    <el-dialog title="审批轨迹" :visible.sync="historyOpen" width="600px" append-to-body>
+    <el-dialog title="审批轨迹" :visible.sync="trackOpen" width="600px" append-to-body>
       <el-timeline>
         <el-timeline-item
-          v-for="(record, index) in historyList"
+          v-for="(item, index) in trackList"
           :key="index"
-          :timestamp="parseTime(record.completeTime || record.createTime)"
-          :color="timelineColor(record.action)"
+          :timestamp="parseTime(item.endTime || item.startTime)"
+          :color="index < trackList.length ? '#409EFF' : '#909399'"
         >
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>{{ record.assignee }}</strong>
-              <el-tag :type="actionTagType(record.action)" size="mini" style="margin-left: 8px;">
-                {{ actionLabel(record.action) }}
-              </el-tag>
-              <span style="margin-left: 8px; color: #999;">{{ record.nodeName }}</span>
-            </div>
+          <div>
+            <strong>{{ item.assignee }}</strong>
+            <el-tag type="primary" size="mini" style="margin-left: 8px;">{{ item.taskName }}</el-tag>
           </div>
-          <div v-if="record.comment" style="margin-top: 6px; color: #666; font-size: 13px;">
-            审批意见：{{ record.comment }}
+          <div style="margin-top: 4px; color: #999; font-size: 13px;">
+            {{ parseTime(item.startTime) }} ~ {{ parseTime(item.endTime) }}
+            （{{ formatDuration(item.duration) }}）
           </div>
         </el-timeline-item>
       </el-timeline>
+      <div v-if="trackList.length === 0" style="text-align:center;color:#999;padding:40px;">
+        暂无审批记录
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { listTask, approveTask, getHistory } from "@/api/workflow/task"
+import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, startLeave, getProcessTrack } from "@/api/workflow/flowable"
 
 export default {
-  name: "Task",
+  name: "FlowableTask",
   data() {
     return {
-      // 遮罩层
-      loading: true,
-      // 显示搜索条件
+      loading: false,
       showSearch: true,
-      // 总条数
-      total: 0,
-      // 表格数据
-      taskList: [],
-      // 查询参数
+      activeTab: 'todo',
       queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        assignee: undefined,
-        status: "pending"
+        assignee: undefined
       },
-      // 审批对话框
+      todoList: [],
+      historyList: [],
       approveOpen: false,
       approveForm: {
-        taskId: undefined,
-        action: "agree",
-        comment: ""
+        action: 'approve',
+        comment: ''
       },
-      currentTask: {},
-      // 审批轨迹对话框
-      historyOpen: false,
-      historyList: []
+      currentTask: { variables: {} },
+      leaveOpen: false,
+      leaveForm: {
+        applicant: '',
+        days: 1,
+        manager: '',
+        director: ''
+      },
+      leaveRules: {
+        applicant: [{ required: true, message: '请输入申请人', trigger: 'blur' }],
+        manager: [{ required: true, message: '请输入部门经理', trigger: 'blur' }]
+      },
+      trackOpen: false,
+      trackList: []
     }
   },
   created() {
-    // 默认查询当前登录用户的待办
     this.queryParams.assignee = this.$store.state.user.name
-    this.getList()
+    this.loadTodo()
   },
   methods: {
-    /** 查询待办列表 */
-    getList() {
+    handleTabClick(tab) {
+      if (tab.name === 'todo') {
+        this.loadTodo()
+      } else {
+        this.loadHistory()
+      }
+    },
+    handleQuery() {
+      if (this.activeTab === 'todo') {
+        this.loadTodo()
+      } else {
+        this.loadHistory()
+      }
+    },
+    resetQuery() {
+      this.queryParams.assignee = this.$store.state.user.name
+      this.handleQuery()
+    },
+    loadTodo() {
+      if (!this.queryParams.assignee) {
+        this.todoList = []
+        return
+      }
       this.loading = true
-      listTask(this.queryParams).then(response => {
-        this.taskList = response.rows
-        this.total = response.total
+      listTodoTasks(this.queryParams.assignee).then(res => {
+        this.todoList = res.data || []
+        this.loading = false
+      }).catch(() => {
         this.loading = false
       })
     },
-    /** 搜索按钮操作 */
-    handleQuery() {
-      this.queryParams.pageNum = 1
-      this.getList()
-    },
-    /** 重置按钮操作 */
-    resetQuery() {
-      this.resetForm("queryForm")
-      this.handleQuery()
-    },
-    /** 打开审批对话框 */
-    handleApprove(row) {
-      this.currentTask = row
-      this.approveForm.taskId = row.id
-      this.approveForm.action = "agree"
-      this.approveForm.comment = ""
-      this.approveOpen = true
-    },
-    /** 提交审批 */
-    submitApprove() {
-      const actionText = this.approveForm.action === "agree" ? "同意" : "驳回"
-      this.$modal.confirm('是否确认' + actionText + '该申请？').then(() => {
-        return approveTask(this.approveForm)
-      }).then(() => {
-        this.$modal.msgSuccess(actionText + "成功")
-        this.approveOpen = false
-        this.getList()
-      }).catch(() => {})
-    },
-    /** 查看业务详情（跳转到对应的业务页面） */
-    viewBusinessDetail(task) {
-      // 根据 businessTable 跳转到不同的业务详情页
-      const routes = {
-        "leave_record": "/leave/detail/" + task.businessId
+    loadHistory() {
+      if (!this.queryParams.assignee) {
+        this.historyList = []
+        return
       }
-      const path = routes[task.businessTable]
-      if (path) {
-        // 在新标签页打开
-        const routeData = this.$router.resolve({ path: path })
-        window.open(routeData.href, '_blank')
-      } else {
-        this.$modal.msgWarning("暂不支持查看该业务详情")
-      }
-    },
-    /** 查看审批轨迹 */
-    handleHistory(row) {
-      const params = {
-        businessTable: row.businessTable,
-        businessId: row.businessId
-      }
-      getHistory(params).then(response => {
-        this.historyList = response.data
-        this.historyOpen = true
+      this.loading = true
+      listHistoryTasks(this.queryParams.assignee).then(res => {
+        this.historyList = res.data || []
+        this.loading = false
+      }).catch(() => {
+        this.loading = false
       })
     },
-    /** 操作对应的标签样式 */
-    actionTagType(action) {
-      const map = {
-        submit: "primary",
-        agree: "success",
-        reject: "danger",
-        auto_pass: "warning",
-        auto_reject: "danger"
-      }
-      return map[action] || ""
+    handleApprove(row) {
+      this.currentTask = row
+      this.approveForm = { action: 'approve', comment: '' }
+      this.approveOpen = true
     },
-    /** 操作对应的中文名 */
-    actionLabel(action) {
-      const map = {
-        submit: "发起",
-        agree: "同意",
-        reject: "驳回",
-        auto_pass: "自动通过",
-        auto_reject: "自动驳回"
+    submitApprove() {
+      const { action, comment } = this.approveForm
+      const taskId = this.currentTask.taskId
+      if (action === 'approve') {
+        approveTask(taskId, comment || '同意').then(() => {
+          this.msgSuccess('审批通过')
+          this.approveOpen = false
+          this.loadTodo()
+        })
+      } else {
+        rejectTask(taskId, comment || '不同意').then(() => {
+          this.msgSuccess('已驳回')
+          this.approveOpen = false
+          this.loadTodo()
+        })
       }
-      return map[action] || action
     },
-    /** 审批轨迹时间线颜色 */
-    timelineColor(action) {
-      const map = {
-        submit: "#409EFF",
-        agree: "#67C23A",
-        reject: "#F56C6C",
-        auto_pass: "#E6A23C",
-        auto_reject: "#F56C6C"
-      }
-      return map[action] || "#999"
+    handleTrack(processInstanceId) {
+      this.trackOpen = true
+      this.trackList = []
+      getProcessTrack(processInstanceId).then(res => {
+        this.trackList = res.data || []
+      })
+    },
+    handleStartLeave() {
+      this.leaveForm = { applicant: this.queryParams.assignee || '', days: 1, manager: '', director: '' }
+      this.leaveOpen = true
+    },
+    submitLeave() {
+      this.$refs.leaveForm.validate(valid => {
+        if (!valid) return
+        startLeave(this.leaveForm).then(() => {
+          this.msgSuccess('请假流程已发起')
+          this.leaveOpen = false
+          this.loadTodo()
+        })
+      })
+    },
+    formatDuration(ms) {
+      if (!ms) return '-'
+      const seconds = Math.floor(ms / 1000)
+      if (seconds < 60) return seconds + '秒'
+      const minutes = Math.floor(seconds / 60)
+      if (minutes < 60) return minutes + '分' + (seconds % 60) + '秒'
+      const hours = Math.floor(minutes / 60)
+      return hours + '时' + (minutes % 60) + '分'
     }
   }
 }

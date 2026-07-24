@@ -273,6 +273,35 @@
       - REDIS_HOST=ruoyi-redis
       - JAVA_OPTS=-Xmx256m -Xms128m
     mem_limit: 448m
+  ruoyi-modules-workflow:
+    container_name: ruoyi-modules-workflow
+    image: docker-ruoyi-modules-workflow:3.6.7
+    build:
+      context: ./ruoyi/modules/workflow
+      dockerfile: dockerfile
+    ports:
+      - "9208:9208"
+    depends_on:
+      - ruoyi-mysql
+      - ruoyi-redis
+    links:
+      - ruoyi-mysql
+      - ruoyi-redis
+    environment:
+      - NACOS_HOST=ruoyi-nacos
+      - DB_HOST=ruoyi-mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=ruoyi-redis
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    mem_limit: 768m
   elasticsearch:
     image: elasticsearch:7.17.0
     container_name: ruoyi-skywalking-es

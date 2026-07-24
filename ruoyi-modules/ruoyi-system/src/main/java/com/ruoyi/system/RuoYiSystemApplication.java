@@ -19,7 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(scanBasePackages = "com.ruoyi")
 @EnableAsync
 @EnableScheduling
-@MapperScan({"com.ruoyi.system.mapper", "com.ruoyi.system.mapper.workflow"})
+@MapperScan({"com.ruoyi.system.mapper"})
 public class RuoYiSystemApplication
 {
     public static void main(String[] args)

@@ -34,6 +34,7 @@
         <poi.version>4.1.2</poi.version>
         <springdoc.version>2.6.0</springdoc.version>
         <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
+        <flowable.version>7.0.1</flowable.version>
     </properties>
 
     <!-- 依赖声明 -->
