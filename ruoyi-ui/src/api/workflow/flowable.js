@@ -25,6 +25,38 @@ export function deployTable(config) {
   })
 }
 
+// 删除指定版本的流程定义
+export function deleteDefinition(deploymentId) {
+  return request({
+    url: '/workflow/definition/' + deploymentId,
+    method: 'delete'
+  })
+}
+
+// 应用某版本（克隆为最新版本）
+export function applyDefinition(deploymentId) {
+  return request({
+    url: '/workflow/definition/' + deploymentId + '/apply',
+    method: 'post'
+  })
+}
+
+// 获取流程配置（用于修改，提取节点+连线）
+export function getDefinitionConfig(deploymentId) {
+  return request({
+    url: '/workflow/definition/' + deploymentId + '/config',
+    method: 'get'
+  })
+}
+
+// 查询指定 key 的所有历史版本
+export function getHistoryVersions(processKey) {
+  return request({
+    url: '/workflow/definition/history/' + processKey,
+    method: 'get'
+  })
+}
+
 // ==================== 流程实例 ====================
 
 export function startLeave(data) {

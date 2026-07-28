@@ -2,6 +2,9 @@ package com.ruoyi.workflow.controller;
 
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.web.controller.BaseController;
+import com.ruoyi.common.core.constant.SecurityConstants;
+import com.ruoyi.common.security.utils.SecurityUtils;
+import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.workflow.service.FlowableService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -22,33 +25,46 @@ public class ProcessInstanceController extends BaseController {
     @Autowired
     private FlowableService flowableService;
 
+    @Autowired
+    private RemoteUserService remoteUserService;
+
     /**
-     * 发起请假流程
+     * 通用发起流程
+     * <p>
+     * 前端只传业务参数，后端自动查审批链（部门经理、上级领导），找不到默认 admin。
+     *
+     * @param processKey 流程标识，必填，如 "leave"、"cost"
+     * @param applicant  申请人用户名，必填，用于查询组织架构中的审批链
+     * @param allParams  业务参数 Map，Spring 自动收集所有未匹配的 @RequestParam，
+     *                   如 days=3、amount=5000 等，会合并到流程变量中
+     * @return { processInstanceId: "xxx", tip: "流程已发起" }
      */
-    @PostMapping("/leave/start")
-    public R<Map<String, Object>> startLeave(@RequestParam String applicant,
-                                              @RequestParam(defaultValue = "1") int days,
-                                              @RequestParam(defaultValue = "manager") String manager,
-                                              @RequestParam(defaultValue = "director") String director) {
-        Map<String, Object> vars = new HashMap<>();
-        vars.put("applicant", applicant);
-        vars.put("days", days);
-        vars.put("manager", manager);
-        vars.put("director", director);
+    @PostMapping("/start")
+    public R<Map<String, Object>> start(@RequestParam String processKey,
+                                         @RequestParam String applicant,
+                                         @RequestParam Map<String, Object> allParams) {
+        Map<String, String> approvers = Map.of("deptLeader", "admin", "parentDeptLeader", "admin");
+        try {
+            R<Map<String, String>> r = remoteUserService.getApprovers(applicant, SecurityConstants.FROM_SOURCE);
+            if (r != null && r.getData() != null) approvers = r.getData();
+        } catch (Exception ignored) {}
 
-        ProcessInstance instance = flowableService.startProcess("leave", vars);
+        Map<String, Object> vars = new HashMap<>(allParams);
+        vars.remove("processKey");
+        vars.put("deptLeader", approvers.get("deptLeader"));
+        vars.put("parentDeptLeader", approvers.get("parentDeptLeader"));
 
+        ProcessInstance instance = flowableService.startProcess(processKey, vars);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("processInstanceId", instance.getId());
-        result.put("applicant", applicant);
-        result.put("days", days);
-        result.put("needDirector", days > 3);
-        result.put("tip", days > 3 ? "大于3天，部门经理审批后还需总监审批" : "≤3天，部门经理审批后即结束");
+        result.put("tip", "流程已发起");
         return R.ok(result);
     }
 
     /**
-     * 运行中的流程实例
+     * 查询所有运行中的流程实例
+     *
+     * @return [{ processInstanceId, startTime, activityId, variables }]
      */
     @GetMapping("/running")
     public R<List<Map<String, Object>>> running() {
@@ -65,7 +81,10 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 流程实例状态
+     * 查询流程实例状态（运行中/已结束/不存在）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return { status, activityId（运行中时）, currentTasks, startTime, endTime }
      */
     @GetMapping("/{processInstanceId}")
     public R<Map<String, Object>> status(@PathVariable String processInstanceId) {
@@ -97,7 +116,10 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 审批轨迹
+     * 查询审批轨迹（所有历史任务节点）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return [{ taskId, taskName, assignee, startTime, endTime, duration }]
      */
     @GetMapping("/{processInstanceId}/track")
     public R<List<Map<String, Object>>> track(@PathVariable String processInstanceId) {
@@ -116,7 +138,11 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 一键演示: ≤3天
+     * 一键演示：≤3天请假（无需总监审批）
+     * <p>
+     * 自动发起→审批→完成，用于快速测试流程。
+     *
+     * @return { processInstanceId, steps: [{ step, desc }] }
      */
     @PostMapping("/demo/simple")
     public R<Map<String, Object>> demoSimple() {
@@ -139,7 +165,11 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 一键演示: >3天
+     * 一键演示：>3天请假（需总监审批）
+     * <p>
+     * 自动发起→经理审批→总监审批→完成，用于快速测试完整流程。
+     *
+     * @return { processInstanceId, steps: [{ step, desc }] }
      */
     @PostMapping("/demo/full")
     public R<Map<String, Object>> demoFull() {

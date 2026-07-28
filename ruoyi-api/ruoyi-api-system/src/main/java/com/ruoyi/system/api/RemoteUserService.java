@@ -62,4 +62,14 @@ public interface RemoteUserService
      */
     @GetMapping("/user/queryLargeData")
     public ResponseEntity<Map<String, String>> queryLargeData(int count);
+
+    /**
+     * 获取用户的审批链（部门经理 + 总监），找不到默认返回 admin
+     *
+     * @param username 用户名
+     * @param source 请求来源
+     * @return { "manager": "lisi", "director": "wangwu" }
+     */
+    @GetMapping("/user/approvers/{username}")
+    public R<Map<String, String>> getApprovers(@PathVariable("username") String username, @RequestHeader(SecurityConstants.FROM_SOURCE) String source);
 }

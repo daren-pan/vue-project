@@ -144,6 +144,35 @@ public class SysUserController extends BaseController
     }
 
     /**
+     * 获取用户的所有组织上级（通用，适配任意流程）
+     * 返回 { "deptLeader": "李四", "parentDeptLeader": "王五" }
+     * 找不到默认 admin
+     */
+    @InnerAuth
+    @GetMapping("/approvers/{username}")
+    public R<Map<String, String>> getApprovers(@PathVariable String username)
+    {
+        Map<String, String> result = new HashMap<>();
+        String fallback = "admin";
+
+        SysUser user = userService.selectUserByUserName(username);
+        if (user != null && user.getDeptId() != null) {
+            SysDept dept = deptService.selectDeptById(user.getDeptId());
+            result.put("deptLeader",
+                dept != null && StringUtils.isNotBlank(dept.getLeader()) ? dept.getLeader() : fallback);
+
+            if (dept != null && dept.getParentId() != null && dept.getParentId() != 0) {
+                SysDept parent = deptService.selectDeptById(dept.getParentId());
+                result.put("parentDeptLeader",
+                    parent != null && StringUtils.isNotBlank(parent.getLeader()) ? parent.getLeader() : fallback);
+            }
+        }
+        result.putIfAbsent("deptLeader", fallback);
+        result.putIfAbsent("parentDeptLeader", fallback);
+        return R.ok(result);
+    }
+
+    /**
      * 注册用户信息
      */
     @InnerAuth

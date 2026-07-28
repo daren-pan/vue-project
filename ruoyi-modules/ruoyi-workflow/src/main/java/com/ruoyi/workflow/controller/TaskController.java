@@ -3,6 +3,8 @@ package com.ruoyi.workflow.controller;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.web.controller.BaseController;
 import com.ruoyi.workflow.service.FlowableService;
+import org.flowable.engine.RepositoryService;
+import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,9 @@ public class TaskController extends BaseController {
     @Autowired
     private FlowableService flowableService;
 
+    @Autowired
+    private RepositoryService repositoryService;
+
     /**
      * 查询某人待办任务
      */
@@ -33,6 +38,7 @@ public class TaskController extends BaseController {
             m.put("taskId", t.getId());
             m.put("taskName", t.getName());
             m.put("processInstanceId", t.getProcessInstanceId());
+            m.put("processName", getProcessName(t.getProcessDefinitionId()));
             m.put("createTime", t.getCreateTime());
             m.put("variables", flowableService.getTaskVariables(t.getId()));
             return m;
@@ -102,12 +108,29 @@ public class TaskController extends BaseController {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("taskId", t.getId());
             m.put("taskName", t.getName());
+            m.put("processName", getProcessNameByInstance(t.getProcessInstanceId()));
             m.put("processInstanceId", t.getProcessInstanceId());
             m.put("startTime", t.getCreateTime());
             m.put("endTime", t.getEndTime());
             m.put("duration", t.getDurationInMillis());
+            m.put("status", t.getDeleteReason() != null ? "已退回" : "已通过");
             return m;
         }).toList();
         return R.ok(list);
+    }
+
+    private String getProcessName(String processDefinitionId) {
+        try {
+            ProcessDefinition pd = repositoryService.getProcessDefinition(processDefinitionId);
+            return pd != null ? pd.getName() : "-";
+        } catch (Exception e) { return "-"; }
+    }
+
+    private String getProcessNameByInstance(String processInstanceId) {
+        try {
+            var hi = flowableService.getHistoricProcessInstance(processInstanceId);
+            if (hi != null) return getProcessName(hi.getProcessDefinitionId());
+        } catch (Exception ignored) {}
+        return "-";
     }
 }

@@ -51,6 +51,12 @@ public class RemoteUserFallbackFactory implements FallbackFactory<RemoteUserServ
             {
                 return ResponseEntity.notFound().build();
             }
+
+            @Override
+            public R<Map<String, String>> getApprovers(String username, String source)
+            {
+                return R.fail("获取审批链失败:" + throwable.getMessage());
+            }
         };
     }
 }

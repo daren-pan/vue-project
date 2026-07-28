@@ -21,9 +21,6 @@
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-refresh" size="mini" @click="handleQuery">刷新</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button type="success" plain icon="el-icon-plus" size="mini" @click="handleStartLeave">发起请假</el-button>
-      </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="handleQuery"></right-toolbar>
     </el-row>
 
@@ -31,17 +28,8 @@
     <el-tabs v-model="activeTab" @tab-click="handleTabClick">
       <el-tab-pane label="待办任务" name="todo">
         <el-table v-loading="loading" :data="todoList" border stripe>
+          <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
           <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
-          <el-table-column label="申请人" align="center" width="100">
-            <template slot-scope="scope">
-              {{ scope.row.variables.applicant || '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="请假天数" align="center" width="100">
-            <template slot-scope="scope">
-              <el-tag type="warning" size="mini">{{ scope.row.variables.days }} 天</el-tag>
-            </template>
-          </el-table-column>
           <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
           <el-table-column label="创建时间" align="center" width="170">
             <template slot-scope="scope">
@@ -62,7 +50,13 @@
 
       <el-tab-pane label="已办历史" name="history">
         <el-table v-loading="loading" :data="historyList" border stripe>
+          <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
           <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
+          <el-table-column label="状态" align="center" width="80">
+            <template slot-scope="scope">
+              <el-tag :type="scope.row.status === '已退回' ? 'danger' : 'success'" size="mini">{{ scope.row.status }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
           <el-table-column label="开始时间" align="center" width="170">
             <template slot-scope="scope">
@@ -92,16 +86,10 @@
     </el-tabs>
 
     <!-- 审批对话框 -->
-    <el-dialog title="审批任务" :visible.sync="approveOpen" width="550px" append-to-body>
+    <el-dialog title="审批任务" :visible.sync="approveOpen" width="450px" append-to-body>
       <el-form ref="approveForm" :model="approveForm" label-width="80px">
         <el-form-item label="任务名称">
           <el-tag type="primary" size="medium">{{ currentTask.taskName }}</el-tag>
-        </el-form-item>
-        <el-form-item label="申请人">
-          <span>{{ currentTask.variables.applicant || '-' }}</span>
-        </el-form-item>
-        <el-form-item label="请假天数">
-          <el-tag type="warning" size="mini">{{ currentTask.variables.days }} 天</el-tag>
         </el-form-item>
         <el-form-item label="操作">
           <el-radio-group v-model="approveForm.action">
@@ -121,29 +109,6 @@
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitApprove">确 定</el-button>
         <el-button @click="approveOpen = false">取 消</el-button>
-      </div>
-    </el-dialog>
-
-    <!-- 发起请假对话框 -->
-    <el-dialog title="发起请假" :visible.sync="leaveOpen" width="500px" append-to-body>
-      <el-form ref="leaveForm" :model="leaveForm" :rules="leaveRules" label-width="100px">
-        <el-form-item label="申请人" prop="applicant">
-          <el-input v-model="leaveForm.applicant" placeholder="请输入申请人" />
-        </el-form-item>
-        <el-form-item label="请假天数" prop="days">
-          <el-input-number v-model="leaveForm.days" :min="1" :max="30" />
-          <span style="margin-left:10px;color:#999;">>3天需总监审批</span>
-        </el-form-item>
-        <el-form-item label="部门经理" prop="manager">
-          <el-input v-model="leaveForm.manager" placeholder="请输入部门经理用户名" />
-        </el-form-item>
-        <el-form-item label="总监" prop="director">
-          <el-input v-model="leaveForm.director" placeholder=">3天时需填写" />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitLeave">发 起</el-button>
-        <el-button @click="leaveOpen = false">取 消</el-button>
       </div>
     </el-dialog>
 
@@ -174,7 +139,7 @@
 </template>
 
 <script>
-import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, startLeave, getProcessTrack } from "@/api/workflow/flowable"
+import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, getProcessTrack } from "@/api/workflow/flowable"
 
 export default {
   name: "FlowableTask",
@@ -194,17 +159,6 @@ export default {
         comment: ''
       },
       currentTask: { variables: {} },
-      leaveOpen: false,
-      leaveForm: {
-        applicant: '',
-        days: 1,
-        manager: '',
-        director: ''
-      },
-      leaveRules: {
-        applicant: [{ required: true, message: '请输入申请人', trigger: 'blur' }],
-        manager: [{ required: true, message: '请输入部门经理', trigger: 'blur' }]
-      },
       trackOpen: false,
       trackList: []
     }
@@ -268,16 +222,16 @@ export default {
       const taskId = this.currentTask.taskId
       if (action === 'approve') {
         approveTask(taskId, comment || '同意').then(() => {
-          this.msgSuccess('审批通过')
+          this.$message.success('审批通过')
           this.approveOpen = false
           this.loadTodo()
-        })
+        }).catch(() => {})
       } else {
         rejectTask(taskId, comment || '不同意').then(() => {
-          this.msgSuccess('已驳回')
+          this.$message.success('已驳回')
           this.approveOpen = false
           this.loadTodo()
-        })
+        }).catch(() => {})
       }
     },
     handleTrack(processInstanceId) {
@@ -287,20 +241,7 @@ export default {
         this.trackList = res.data || []
       })
     },
-    handleStartLeave() {
-      this.leaveForm = { applicant: this.queryParams.assignee || '', days: 1, manager: '', director: '' }
-      this.leaveOpen = true
-    },
-    submitLeave() {
-      this.$refs.leaveForm.validate(valid => {
-        if (!valid) return
-        startLeave(this.leaveForm).then(() => {
-          this.msgSuccess('请假流程已发起')
-          this.leaveOpen = false
-          this.loadTodo()
-        })
-      })
-    },
+
     formatDuration(ms) {
       if (!ms) return '-'
       const seconds = Math.floor(ms / 1000)

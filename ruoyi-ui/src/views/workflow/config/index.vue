@@ -46,9 +46,17 @@
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="审批人" prop="assignee" min-width="180">
+        <el-table-column label="审批人" prop="assignee" min-width="240">
           <template slot-scope="s">
-            <el-input v-if="s.row.type === 'userTask'" v-model="s.row.assignee" size="mini" placeholder="如 ${manager} 或用户名" />
+            <template v-if="s.row.type === 'userTask'">
+              <el-radio-group v-model="s.row._assigneeType" size="mini" @change="onAssigneeTypeChange(s.row)">
+                <el-radio label="deptLeader">部门经理</el-radio>
+                <el-radio label="parentDeptLeader">上级领导</el-radio>
+                <el-radio label="manual">手动指定</el-radio>
+              </el-radio-group>
+              <el-input v-if="s.row._assigneeType === 'manual'" v-model="s.row.assignee" size="mini"
+                placeholder="输入用户名" style="width:120px;margin-top:4px;" />
+            </template>
             <span v-else style="color:#999;">-</span>
           </template>
         </el-table-column>
@@ -105,31 +113,50 @@ export default {
     return {
       deploying: false,
       form: {
-        processKey: 'leave',
-        processName: '请假审批',
-        nodes: [
-          { id: 'start', name: '开始', type: 'startEvent' },
-          { id: 'managerApprove', name: '部门经理审批', type: 'userTask', assignee: '${manager}' },
-          { id: 'gateway1', name: '判断天数', type: 'exclusiveGateway' },
-          { id: 'directorApprove', name: '总监审批', type: 'userTask', assignee: '${director}' },
-          { id: 'end', name: '结束', type: 'endEvent' }
-        ],
-        lines: [
-          { from: 'start', to: 'managerApprove' },
-          { from: 'managerApprove', to: 'gateway1' },
-          { from: 'gateway1', to: 'end', condition: 'days <= 3' },
-          { from: 'gateway1', to: 'directorApprove', condition: 'days > 3' },
-          { from: 'directorApprove', to: 'end' }
-        ]
+        processKey: '',
+        processName: '',
+        nodes: [],
+        lines: []
       }
     }
   },
+  created() {
+    if (this.$route.query.config) {
+      const cfg = JSON.parse(this.$route.query.config)
+      this.form.processKey = cfg.processKey || ''
+      this.form.processName = cfg.processName || ''
+      this.form.nodes = (cfg.nodes || []).map(n => this.initNode(n))
+      // 反向转换 le/lt/gt/ge/ne → <=/</>/>=/!= 便于阅读
+      this.form.lines = (cfg.lines || []).map(l => {
+        if (l.condition) {
+          l.condition = l.condition
+            .replace(/\ble\b/g, '<=').replace(/\bge\b/g, '>=')
+            .replace(/\blt\b/g, '<').replace(/\bgt\b/g, '>')
+            .replace(/\bne\b/g, '!=').replace('${', '').replace('}', '')
+        }
+        return l
+      })
+    }
+  },
   methods: {
+    initNode(n) {
+      if (n.type === 'userTask') {
+        if (n.assignee === '${deptLeader}') n._assigneeType = 'deptLeader'
+        else if (n.assignee === '${parentDeptLeader}') n._assigneeType = 'parentDeptLeader'
+        else { n._assigneeType = 'manual'; if (!n.assignee) n.assignee = '' }
+      }
+      return n
+    },
     handleBack() {
       this.$router.push({ path: '/workflow/definition' })
     },
     handleAddNode() {
-      this.form.nodes.push({ id: '', name: '', type: 'userTask', assignee: '' })
+      this.form.nodes.push({ id: '', name: '', type: 'userTask', assignee: '', _assigneeType: 'deptLeader' })
+    },
+    onAssigneeTypeChange(row) {
+      if (row._assigneeType === 'deptLeader') row.assignee = '${deptLeader}'
+      else if (row._assigneeType === 'parentDeptLeader') row.assignee = '${parentDeptLeader}'
+      else row.assignee = ''
     },
     handleAddLine() {
       this.form.lines.push({ from: '', to: '', condition: '' })
@@ -141,7 +168,19 @@ export default {
       }
       this.$confirm('确认部署「' + this.form.processName + '」？', '提示', { type: 'info' }).then(() => {
         this.deploying = true
-        deployTable(this.form).then(() => {
+        // 清理前端临时字段
+        const payload = JSON.parse(JSON.stringify(this.form))
+        payload.nodes.forEach(n => delete n._assigneeType)
+        // 条件表达式 < > 会被 HTML 吃掉，前端先转成 Flowable 文本运算符
+        payload.lines.forEach(l => {
+          if (l.condition) {
+            l.condition = l.condition
+              .replace(/<=/g, 'le').replace(/>=/g, 'ge')
+              .replace(/!=/g, 'ne').replace(/<>/g, 'ne')
+              .replace(/</g, 'lt').replace(/>/g, 'gt')
+          }
+        })
+        deployTable(payload).then(() => {
           this.$message.success('部署成功')
         }).finally(() => {
           this.deploying = false

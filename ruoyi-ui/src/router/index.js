@@ -88,7 +88,7 @@ export const constantRoutes = [
       }
     ]
   },
-  // 工作流管理（作为系统管理下的一级菜单）
+  // 流程管理（作为系统管理下的一级菜单）
   // 注意：若依的菜单是通过后端 sys_menu 表配置的，此处路由仅作前端组件映射
   // 实际使用中需要到【系统管理→菜单管理】中配置对应菜单记录，并分配权限
   {
@@ -96,7 +96,7 @@ export const constantRoutes = [
     component: Layout,
     alwaysShow: true,
     redirect: '/workflow/definition',
-    meta: { title: '工作流管理', icon: 'list' },
+    meta: { title: '流程管理', icon: 'list' },
     children: [
       {
         path: 'definition',
@@ -116,6 +116,12 @@ export const constantRoutes = [
         component: () => import('@/views/workflow/task/index'),
         name: 'WorkflowTask',
         meta: { title: '我的待办', icon: 'edit', permissions: ['workflow:task:list'] }
+      },
+      {
+        path: 'apply',
+        component: () => import('@/views/workflow/apply/index'),
+        name: 'WorkflowApply',
+        meta: { title: '流程申请', icon: 'form' }
       }
     ]
   }
