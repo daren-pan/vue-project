@@ -123,17 +123,49 @@ public class ProcessInstanceController extends BaseController {
      */
     @GetMapping("/{processInstanceId}/track")
     public R<List<Map<String, Object>>> track(@PathVariable String processInstanceId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        // 1. 申请人发起记录
+        Map<String, Object> vars = flowableService.getVariables(processInstanceId);
+        String applicant = vars.getOrDefault("applicant", "未知").toString();
+
+        var hi = flowableService.getHistoricProcessInstance(processInstanceId);
+        Map<String, Object> start = new LinkedHashMap<>();
+        start.put("node", "发起申请");
+        start.put("assignee", applicant);
+        start.put("startTime", hi != null ? hi.getStartTime() : null);
+        start.put("endTime", hi != null ? hi.getStartTime() : null);
+        start.put("status", "completed");
+        list.add(start);
+
+        // 2. 已完成节点（只取已完成的）
         List<HistoricTaskInstance> tasks = flowableService.listProcessTrack(processInstanceId);
-        List<Map<String, Object>> list = tasks.stream().map(t -> {
+        Set<String> added = new HashSet<>();
+        tasks.forEach(t -> {
+            if (t.getEndTime() == null) return; // 跳过未完成的
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("taskId", t.getId());
-            m.put("taskName", t.getName());
+            m.put("node", t.getName());
             m.put("assignee", t.getAssignee());
             m.put("startTime", t.getStartTime());
             m.put("endTime", t.getEndTime());
-            m.put("duration", t.getDurationInMillis());
-            return m;
-        }).toList();
+            m.put("status", "completed");
+            list.add(m);
+            added.add(t.getName() + t.getAssignee());
+        });
+
+        // 3. 当前待审批节点（排除已完成中出现过的）
+        flowableService.listTasksByInstance(processInstanceId).forEach(t -> {
+            String key = t.getName() + t.getAssignee();
+            if (added.contains(key)) return;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("node", t.getName());
+            m.put("assignee", t.getAssignee());
+            m.put("startTime", t.getCreateTime());
+            m.put("status", "pending");
+            list.add(m);
+            added.add(key);
+        });
+
         return R.ok(list);
     }
 

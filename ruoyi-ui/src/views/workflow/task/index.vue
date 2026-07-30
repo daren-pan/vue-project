@@ -28,6 +28,18 @@
     <el-tabs v-model="activeTab" @tab-click="handleTabClick">
       <el-tab-pane label="待办任务" name="todo">
         <el-table v-loading="loading" :data="todoList" border stripe>
+          <el-table-column type="expand">
+            <template slot-scope="scope">
+              <div style="padding:5px 20px;" v-if="scope.row.track && scope.row.track.length">
+                <span style="font-weight:bold;color:#67C23A;">已审批:</span>
+                <el-tag v-for="t in scope.row.track" :key="t.taskName"
+                  size="mini" effect="plain" style="margin:2px 4px;">
+                  {{ t.assignee || '-' }} ({{ t.taskName }})
+                </el-tag>
+              </div>
+              <div v-else style="padding:5px 20px;color:#999;">暂无审批记录</div>
+            </template>
+          </el-table-column>
           <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
           <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
           <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
@@ -105,6 +117,10 @@
             :placeholder="approveForm.action === 'approve' ? '请输入审批意见（可选）' : '请输入驳回原因'"
           />
         </el-form-item>
+        <el-form-item label="加签">
+          <el-input v-model="approveForm.signUser" placeholder="输入加签人用户名（可选）" style="width:200px;" />
+          <el-button size="mini" @click="handleAddSign" :loading="signLoading" style="margin-left:8px;">确认加签</el-button>
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitApprove">确 定</el-button>
@@ -118,16 +134,19 @@
         <el-timeline-item
           v-for="(item, index) in trackList"
           :key="index"
-          :timestamp="parseTime(item.endTime || item.startTime)"
-          :color="index < trackList.length ? '#409EFF' : '#909399'"
+          :timestamp="item.endTime ? parseTime(item.endTime) : '审批中...'"
+          :color="item.status === 'completed' ? '#67C23A' : '#E6A23C'"
         >
           <div>
             <strong>{{ item.assignee }}</strong>
-            <el-tag type="primary" size="mini" style="margin-left: 8px;">{{ item.taskName }}</el-tag>
+            <el-tag :type="item.status === 'completed' ? 'success' : 'warning'" size="mini" style="margin-left: 8px;">
+              {{ item.node }}
+            </el-tag>
+            <span v-if="item.status === 'pending'" style="color:#E6A23C;margin-left:8px;font-size:12px;">⏳ 审批中</span>
           </div>
-          <div style="margin-top: 4px; color: #999; font-size: 13px;">
-            {{ parseTime(item.startTime) }} ~ {{ parseTime(item.endTime) }}
-            （{{ formatDuration(item.duration) }}）
+          <div v-if="item.startTime" style="margin-top: 4px; color: #999; font-size: 13px;">
+            {{ parseTime(item.startTime) }}
+            <span v-if="item.endTime"> ~ {{ parseTime(item.endTime) }}</span>
           </div>
         </el-timeline-item>
       </el-timeline>
@@ -140,6 +159,7 @@
 
 <script>
 import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, getProcessTrack } from "@/api/workflow/flowable"
+import request from "@/utils/request"
 
 export default {
   name: "FlowableTask",
@@ -156,8 +176,10 @@ export default {
       approveOpen: false,
       approveForm: {
         action: 'approve',
-        comment: ''
+        comment: '',
+        signUser: ''
       },
+      signLoading: false,
       currentTask: { variables: {} },
       trackOpen: false,
       trackList: []
@@ -214,8 +236,21 @@ export default {
     },
     handleApprove(row) {
       this.currentTask = row
-      this.approveForm = { action: 'approve', comment: '' }
+      this.approveForm = { action: 'approve', comment: '', signUser: '' }
       this.approveOpen = true
+    },
+    handleAddSign() {
+      const user = this.approveForm.signUser.trim()
+      if (!user) { this.$message.warning('请输入加签人用户名'); return }
+      this.signLoading = true
+      request({ url: '/workflow/task/addSign', method: 'post',
+        params: { taskId: this.currentTask.taskId, assignee: user }
+      }).then(res => {
+        this.$message.success(res.data.tip || '加签成功')
+        this.approveForm.signUser = ''
+        this.signLoading = false
+        this.loadTodo()
+      }).catch(() => { this.signLoading = false })
     },
     submitApprove() {
       const { action, comment } = this.approveForm
