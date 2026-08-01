@@ -37,7 +37,10 @@ public class TaskController extends BaseController {
     private RuntimeService runtimeService;
 
     /**
-     * 查询某人待办任务
+     * 查询某人待办任务（含加签任务），附带审批进度预览
+     *
+     * @param assignee 审批人用户名
+     * @return [{ taskId, taskName, processInstanceId, processName, createTime, variables, track }]
      */
     @GetMapping("/todo")
     public R<List<Map<String, Object>>> todo(@RequestParam String assignee) {
@@ -46,10 +49,19 @@ public class TaskController extends BaseController {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("taskId", t.getId());
             m.put("taskName", t.getName());
-            m.put("processInstanceId", t.getProcessInstanceId());
-            // 加签任务从父任务取流程信息
-            String pn = "-";
             String resolvedPiId = t.getProcessInstanceId();
+            String pn = "-";
+
+            // 抄送任务：从任务变量取 _ccProcessInstanceId
+            if (resolvedPiId == null && t.getName() != null && t.getName().startsWith("[抄送]")) {
+                Map<String, Object> tv = flowableService.getTaskVariables(t.getId());
+                Object ccPiId = tv.get("_ccProcessInstanceId");
+                if (ccPiId != null) resolvedPiId = ccPiId.toString();
+                String ccName = t.getName();
+                if (ccName.startsWith("[抄送] ")) pn = ccName.substring(5);
+            }
+
+            // 加签任务从父任务取流程信息
             try {
                 if (t.getParentTaskId() != null) {
                     Task parent = taskService.createTaskQuery().taskId(t.getParentTaskId()).singleResult();
@@ -62,33 +74,40 @@ public class TaskController extends BaseController {
                 } else if (t.getProcessDefinitionId() != null) {
                     pn = getProcessName(t.getProcessDefinitionId());
                 }
-            } catch (Exception ignored) {}
-            m.put("processName", pn);
-            m.put("processInstanceId", resolvedPiId); // 加签任务用父任务ID，轨迹按钮才能用
-            m.put("createTime", t.getCreateTime());
-            m.put("variables", flowableService.getTaskVariables(t.getId()));
-            if (resolvedPiId != null) {
-                m.put("track", flowableService.listProcessTrack(resolvedPiId).stream().map(ht -> {
-                    Map<String, Object> tm = new LinkedHashMap<>();
-                    tm.put("taskName", ht.getName());
-                    tm.put("assignee", ht.getAssignee());
-                    tm.put("endTime", ht.getEndTime());
-                    return tm;
-                }).toList());
+            } catch (Exception e) {
+                System.err.println("[workflow] 查询父任务失败(taskId=" + t.getId() + "): " + e.getMessage());
             }
+            m.put("processName", pn);
+            m.put("processInstanceId", resolvedPiId);
+            m.put("createTime", t.getCreateTime());
+            Map<String, Object> vars = new HashMap<>(flowableService.getTaskVariables(t.getId()));
+            // 补 processKey 供前端表单匹配
+            if (!vars.containsKey("processKey") && resolvedPiId != null) {
+                try {
+                    var hi = flowableService.getHistoricProcessInstance(resolvedPiId);
+                    if (hi != null && hi.getProcessDefinitionKey() != null) {
+                        vars.put("processKey", hi.getProcessDefinitionKey());
+                    }
+                } catch (Exception ignored) {}
+            }
+            m.put("variables", vars);
             return m;
         }).toList();
         return R.ok(list);
     }
 
     /**
-     * 审批通过（支持并行加签：主审批+加签人全部通过才算通过）
+     * 审批通过（支持并行加签：主审批 + 加签人全部通过后流程才推进到下一节点）
+     *
+     * @param taskId  任务 ID
+     * @param comment 审批意见，默认 "同意"
+     * @return { taskId, action, coSign, processFinished }
      */
     @PostMapping("/approve")
     public R<Map<String, Object>> approve(@RequestParam String taskId,
                                            @RequestParam(defaultValue = "同意") String comment) {
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
-        if (task == null) return R.fail("任务不存在或已处理");
+        if (task == null) return R.fail("审批失败：任务「" + taskId + "」不存在或已被处理");
 
         String piId = task.getProcessInstanceId();
         boolean isCoSign = task.getParentTaskId() != null;
@@ -130,6 +149,35 @@ public class TaskController extends BaseController {
         }
 
         boolean done = piId != null && flowableService.getProcessInstance(piId) == null;
+        if (done && piId != null) {
+            // 流程结束 → 自动抄送申请人 + 配置的抄送人
+            Map<String, Object> vars = flowableService.getVariables(piId);
+            String applicant = (String) vars.getOrDefault("applicant", "");
+            Set<String> ccSet = new LinkedHashSet<>();
+            // 申请人默认抄送
+            if (!applicant.isEmpty()) ccSet.add(applicant);
+            // 从流程变量取配置的抄送人
+            Object ccObj = vars.get("ccUsers");
+            if (ccObj instanceof List<?> list) {
+                list.forEach(u -> { if (u != null) ccSet.add(u.toString()); });
+            } else if (ccObj instanceof String s && !s.isEmpty()) {
+                for (String u : s.split(",")) ccSet.add(u.trim());
+            }
+            // 创建抄送任务
+            for (String user : ccSet) {
+                if (user.isEmpty()) continue;
+                Task ccTask = taskService.newTask();
+                ccTask.setName("[抄送] " + getProcessNameByInstance(piId));
+                ccTask.setAssignee(user);
+                taskService.saveTask(ccTask);
+                // 存流程信息到任务变量，供前端展示
+                Map<String, Object> tv = new HashMap<>();
+                tv.put("_ccProcessInstanceId", piId);
+                tv.putAll(vars);
+                taskService.setVariables(ccTask.getId(), tv);
+            }
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("taskId", taskId);
         result.put("action", "通过");
@@ -139,14 +187,18 @@ public class TaskController extends BaseController {
     }
 
     /**
-     * 审批驳回
+     * 审批驳回 —— 直接删除流程实例
+     *
+     * @param taskId 任务 ID
+     * @param reason 驳回原因，默认 "不同意"
+     * @return { taskId, action, reason }
      */
     @PostMapping("/reject")
     public R<Map<String, Object>> reject(@RequestParam String taskId,
                                           @RequestParam(defaultValue = "不同意") String reason) {
         Task task = flowableService.getTask(taskId);
         if (task == null) {
-            return R.fail("任务不存在或已处理");
+            return R.fail("驳回失败：任务「" + taskId + "」不存在或已被处理");
         }
 
         flowableService.addComment(taskId, task.getProcessInstanceId(), "驳回: " + reason);
@@ -155,6 +207,34 @@ public class TaskController extends BaseController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("taskId", taskId);
         result.put("action", "驳回");
+        result.put("reason", reason);
+        return R.ok(result);
+    }
+
+    /**
+     * 驳回到上一节点 —— 取消当前任务，流程回退到上一个审批节点
+     *
+     * @param taskId 任务 ID
+     * @param reason 驳回原因，默认 "需修改"
+     * @return { taskId, action, reason }
+     */
+    @PostMapping("/rollback")
+    public R<Map<String, Object>> rollback(@RequestParam String taskId,
+                                            @RequestParam(defaultValue = "需修改") String reason) {
+        Task task = flowableService.getTask(taskId);
+        if (task == null) return R.fail("驳回失败：任务「" + taskId + "」不存在或已被处理");
+        String piId = task.getProcessInstanceId();
+
+        flowableService.addComment(taskId, piId, "驳回上一步: " + reason);
+        try {
+            flowableService.rollbackToPrevious(taskId);
+        } catch (RuntimeException e) {
+            return R.fail(e.getMessage());
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("taskId", taskId);
+        result.put("action", "驳回到上一步");
         result.put("reason", reason);
         return R.ok(result);
     }
@@ -169,7 +249,7 @@ public class TaskController extends BaseController {
     public R<Map<String, Object>> addSign(@RequestParam String taskId,
                                            @RequestParam String assignee) {
         Task task = flowableService.getTask(taskId);
-        if (task == null) return R.fail("任务不存在或已处理");
+        if (task == null) return R.fail("加签失败：任务「" + taskId + "」不存在或已被处理");
 
         Task signTask = taskService.newTask();
         signTask.setName(task.getName() + "(加签)");
@@ -192,7 +272,25 @@ public class TaskController extends BaseController {
     }
 
     /**
+     * 关闭抄送任务（已阅）
+     */
+    @PostMapping("/dismiss")
+    public R<Map<String, Object>> dismiss(@RequestParam String taskId) {
+        Task task = flowableService.getTask(taskId);
+        if (task == null) return R.fail("任务「" + taskId + "」不存在或已被处理");
+        taskService.deleteTask(taskId, "已阅");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("taskId", taskId);
+        result.put("action", "已阅");
+        return R.ok(result);
+    }
+
+    /**
      * 查询某人已办历史
+     *
+     * @param assignee 审批人用户名
+     * @return [{ taskId, taskName, processName, processInstanceId, startTime, endTime, duration, status }]
      */
     @GetMapping("/history")
     public R<List<Map<String, Object>>> history(@RequestParam String assignee) {
@@ -213,18 +311,29 @@ public class TaskController extends BaseController {
         return R.ok(list);
     }
 
+    /**
+     * 根据流程定义 ID 获取流程名称
+     */
     private String getProcessName(String processDefinitionId) {
         try {
             ProcessDefinition pd = repositoryService.getProcessDefinition(processDefinitionId);
             return pd != null ? pd.getName() : "-";
-        } catch (Exception e) { return "-"; }
+        } catch (Exception e) {
+            System.err.println("[workflow] 查询流程名称失败(defId=" + processDefinitionId + "): " + e.getMessage());
+            return "-";
+        }
     }
 
+    /**
+     * 根据流程实例 ID 获取流程名称
+     */
     private String getProcessNameByInstance(String processInstanceId) {
         try {
             var hi = flowableService.getHistoricProcessInstance(processInstanceId);
             if (hi != null) return getProcessName(hi.getProcessDefinitionId());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("[workflow] 查询历史实例失败(piId=" + processInstanceId + "): " + e.getMessage());
+        }
         return "-";
     }
 }

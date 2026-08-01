@@ -17,6 +17,8 @@ public class ProcessConfigDTO {
     private List<NodeDef> nodes;
     /** 连线列表 */
     private List<LineDef> lines;
+    /** 抄送人列表（流程结束自动通知） */
+    private List<String> ccUsers;
 
     public String getProcessKey() { return processKey; }
     public void setProcessKey(String processKey) { this.processKey = processKey; }
@@ -26,6 +28,8 @@ public class ProcessConfigDTO {
     public void setNodes(List<NodeDef> nodes) { this.nodes = nodes; }
     public List<LineDef> getLines() { return lines; }
     public void setLines(List<LineDef> lines) { this.lines = lines; }
+    public List<String> getCcUsers() { return ccUsers; }
+    public void setCcUsers(List<String> ccUsers) { this.ccUsers = ccUsers; }
 
     /**
      * 节点定义
@@ -37,8 +41,10 @@ public class ProcessConfigDTO {
         private String name;
         /** 节点类型：startEvent / endEvent / userTask / exclusiveGateway */
         private String type;
-        /** 审批人（仅 userTask 有效），支持变量 ${manager} */
+        /** 审批人（仅 userTask 有效），支持变量 ${manager}。会签时不填此项 */
         private String assignee;
+        /** 会签人列表（仅 userTask 有效），多人时创建会签节点 */
+        private List<String> assigneeList;
 
         public String getId() { return id; }
         public void setId(String id) { this.id = id; }
@@ -48,6 +54,8 @@ public class ProcessConfigDTO {
         public void setType(String type) { this.type = type; }
         public String getAssignee() { return assignee; }
         public void setAssignee(String assignee) { this.assignee = assignee; }
+        public List<String> getAssigneeList() { return assigneeList; }
+        public void setAssigneeList(List<String> assigneeList) { this.assigneeList = assigneeList; }
     }
 
     /**

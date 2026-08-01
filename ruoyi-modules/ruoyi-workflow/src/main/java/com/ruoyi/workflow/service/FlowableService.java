@@ -6,6 +6,7 @@ import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
+import org.flowable.variable.api.history.HistoricVariableInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,11 @@ public class FlowableService {
 
     // ==================== 流程定义 ====================
 
+    /**
+     * 查询所有最新版本的流程定义
+     *
+     * @return 按 key 升序排列的流程定义列表
+     */
     public List<ProcessDefinition> listDefinitions() {
         return repositoryService.createProcessDefinitionQuery()
                 .latestVersion()
@@ -43,36 +49,144 @@ public class FlowableService {
 
     // ==================== 流程实例 ====================
 
+    /**
+     * 按流程 key 启动流程实例
+     *
+     * @param processKey 流程定义 key
+     * @param variables  流程变量
+     * @return 新创建的流程实例
+     */
     public ProcessInstance startProcess(String processKey, Map<String, Object> variables) {
         return runtimeService.startProcessInstanceByKey(processKey, variables);
     }
 
+    /**
+     * 按流程 key 启动流程实例（带业务键）
+     *
+     * @param processKey  流程定义 key
+     * @param businessKey 业务标识，用于关联业务单据
+     * @param variables   流程变量
+     * @return 新创建的流程实例
+     */
     public ProcessInstance startProcess(String processKey, String businessKey, Map<String, Object> variables) {
         return runtimeService.startProcessInstanceByKey(processKey, businessKey, variables);
     }
 
+    /**
+     * 查询所有运行中的流程实例
+     *
+     * @return 按启动时间倒序排列的流程实例列表
+     */
     public List<ProcessInstance> listRunningProcesses() {
         return runtimeService.createProcessInstanceQuery()
                 .orderByStartTime().desc()
                 .list();
     }
 
+    /**
+     * 按 ID 查询流程实例（仅运行中）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return 流程实例，不存在返回 null
+     */
     public ProcessInstance getProcessInstance(String processInstanceId) {
         return runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
     }
 
+    /**
+     * 获取流程实例的所有变量（运行中或已结束均可）
+     */
     public Map<String, Object> getVariables(String processInstanceId) {
-        return runtimeService.getVariables(processInstanceId);
+        try {
+            return runtimeService.getVariables(processInstanceId);
+        } catch (Exception e) {
+            // 流程已结束，从历史查
+            List<HistoricVariableInstance> hvars =
+                historyService.createHistoricVariableInstanceQuery()
+                    .processInstanceId(processInstanceId).list();
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            for (var hv : hvars) {
+                map.put(hv.getVariableName(), hv.getValue());
+            }
+            return map;
+        }
     }
 
+    /**
+     * 删除流程实例（驳回/撤回/作废）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @param reason            删除原因
+     */
     public void deleteProcessInstance(String processInstanceId, String reason) {
         runtimeService.deleteProcessInstance(processInstanceId, reason);
     }
 
+    /**
+     * 查询流程实例中已完成的任务列表（按结束时间降序）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return 已完成的历史任务列表
+     */
+    public List<HistoricTaskInstance> listFinishedTasks(String processInstanceId) {
+        return historyService.createHistoricTaskInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .finished()
+                .orderByHistoricTaskInstanceEndTime().desc()
+                .list();
+    }
+
+    /**
+     * 驳回到上一节点 —— 取消当前任务，回退到最近完成的用户任务
+     *
+     * @param taskId 当前任务 ID
+     */
+    public void rollbackToPrevious(String taskId) {
+        Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        if (task == null) throw new RuntimeException("任务「" + taskId + "」不存在，无法回退");
+        String piId = task.getProcessInstanceId();
+        if (piId == null) return;
+
+        // 找最近完成的用户任务
+        List<HistoricTaskInstance> finished = historyService.createHistoricTaskInstanceQuery()
+                .processInstanceId(piId)
+                .finished()
+                .orderByHistoricTaskInstanceEndTime().desc()
+                .list();
+        String targetActivityId = null;
+        for (HistoricTaskInstance ht : finished) {
+            if (ht.getTaskDefinitionKey() != null) {
+                targetActivityId = ht.getTaskDefinitionKey();
+                break;
+            }
+        }
+        if (targetActivityId == null) throw new RuntimeException("已是首个审批节点，无法驳回到上一步");
+
+        // 取消当前所有活跃任务
+        List<Task> activeTasks = taskService.createTaskQuery().processInstanceId(piId).list();
+        for (Task t : activeTasks) {
+            // 删除独立加签任务
+            if (t.getParentTaskId() != null) {
+                taskService.deleteTask(t.getId(), "驳回到上一步");
+            }
+        }
+        // 移动流程回到上一个节点
+        runtimeService.createChangeActivityStateBuilder()
+                .processInstanceId(piId)
+                .moveActivityIdTo(activeTasks.get(0).getTaskDefinitionKey(), targetActivityId)
+                .changeState();
+    }
+
     // ==================== 待办任务 ====================
 
+    /**
+     * 查询指定用户的待办任务列表（含普通任务和加签独立任务）
+     *
+     * @param assignee 审批人用户名
+     * @return 按创建时间倒序的待办任务列表
+     */
     public List<Task> listTodoTasks(String assignee) {
         return taskService.createTaskQuery()
                 .taskAssignee(assignee)
@@ -80,36 +194,78 @@ public class FlowableService {
                 .list();
     }
 
+    /**
+     * 查询指定流程实例的当前活跃任务
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return 活跃任务列表
+     */
     public List<Task> listTasksByInstance(String processInstanceId) {
         return taskService.createTaskQuery()
                 .processInstanceId(processInstanceId)
                 .list();
     }
 
+    /**
+     * 按 ID 查询任务
+     *
+     * @param taskId 任务 ID
+     * @return 任务对象，不存在返回 null
+     */
     public Task getTask(String taskId) {
         return taskService.createTaskQuery().taskId(taskId).singleResult();
     }
 
+    /**
+     * 获取任务级别的变量
+     *
+     * @param taskId 任务 ID
+     * @return 变量 Map
+     */
     public Map<String, Object> getTaskVariables(String taskId) {
         return taskService.getVariables(taskId);
     }
 
     // ==================== 审批操作 ====================
 
+    /**
+     * 完成任务（带变量），推进流程到下一节点
+     *
+     * @param taskId    任务 ID
+     * @param variables 提交时携带的变量
+     */
     public void completeTask(String taskId, Map<String, Object> variables) {
         taskService.complete(taskId, variables);
     }
 
+    /**
+     * 完成任务（无额外变量）
+     *
+     * @param taskId 任务 ID
+     */
     public void completeTask(String taskId) {
         taskService.complete(taskId);
     }
 
+    /**
+     * 添加审批意见
+     *
+     * @param taskId            任务 ID
+     * @param processInstanceId 流程实例 ID
+     * @param comment           审批意见内容
+     */
     public void addComment(String taskId, String processInstanceId, String comment) {
         taskService.addComment(taskId, processInstanceId, comment);
     }
 
     // ==================== 历史 ====================
 
+    /**
+     * 查询指定用户的已办历史任务
+     *
+     * @param assignee 审批人用户名
+     * @return 按完成时间倒序的已办任务列表
+     */
     public List<HistoricTaskInstance> listHistoryTasks(String assignee) {
         return historyService.createHistoricTaskInstanceQuery()
                 .taskAssignee(assignee)
@@ -118,13 +274,27 @@ public class FlowableService {
                 .list();
     }
 
+    /**
+     * 查询审批轨迹（过滤掉被回退的任务）
+     */
     public List<HistoricTaskInstance> listProcessTrack(String processInstanceId) {
         return historyService.createHistoricTaskInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .orderByHistoricTaskInstanceStartTime().asc()
-                .list();
+                .list().stream()
+                .filter(t -> {
+                    String r = t.getDeleteReason();
+                    return r == null || (!r.contains("change activity") && !r.contains("驳回上一步"));
+                })
+                .toList();
     }
 
+    /**
+     * 按 ID 查询历史流程实例（已结束的流程）
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return 历史流程实例，不存在返回 null
+     */
     public HistoricProcessInstance getHistoricProcessInstance(String processInstanceId) {
         return historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(processInstanceId)

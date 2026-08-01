@@ -5,7 +5,7 @@
       <el-form-item label="审批人" prop="assignee">
         <el-input
           v-model="queryParams.assignee"
-          placeholder="请输入审批人用户名"
+          placeholder="输入用户名查他人，留空查自己"
           clearable
           @keyup.enter.native="handleQuery"
         />
@@ -21,6 +21,13 @@
       <el-col :span="1.5">
         <el-button type="primary" plain icon="el-icon-refresh" size="mini" @click="handleQuery">刷新</el-button>
       </el-col>
+      <el-col :span="6">
+        <span style="line-height:28px;font-size:12px;color:#666;">
+          颜色说明：
+          <el-tag size="mini" type="warning" effect="plain">待审批</el-tag>
+          <el-tag size="mini" type="info" effect="plain" style="margin-left:4px;">抄送</el-tag>
+        </span>
+      </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="handleQuery"></right-toolbar>
     </el-row>
 
@@ -28,29 +35,29 @@
     <el-tabs v-model="activeTab" @tab-click="handleTabClick">
       <el-tab-pane label="待办任务" name="todo">
         <el-table v-loading="loading" :data="todoList" border stripe>
-          <el-table-column type="expand">
+          <el-table-column type="index" label="序号" width="50" align="center" />
+          <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
+          <el-table-column label="任务名称" align="center" width="160">
             <template slot-scope="scope">
-              <div style="padding:5px 20px;" v-if="scope.row.track && scope.row.track.length">
-                <span style="font-weight:bold;color:#67C23A;">已审批:</span>
-                <el-tag v-for="t in scope.row.track" :key="t.taskName"
-                  size="mini" effect="plain" style="margin:2px 4px;">
-                  {{ t.assignee || '-' }} ({{ t.taskName }})
-                </el-tag>
-              </div>
-              <div v-else style="padding:5px 20px;color:#999;">暂无审批记录</div>
+              <template v-if="isCcTask(scope.row.taskName)">
+                <el-tag type="info" effect="plain" size="small">{{ scope.row.taskName }}</el-tag>
+              </template>
+              <template v-else>
+                <el-tag type="warning" effect="plain" size="small">{{ scope.row.taskName }}</el-tag>
+              </template>
             </template>
           </el-table-column>
-          <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
-          <el-table-column label="任务名称" align="center" prop="taskName" width="150" />
           <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
           <el-table-column label="创建时间" align="center" width="170">
             <template slot-scope="scope">
               {{ parseTime(scope.row.createTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" align="center" width="220">
+          <el-table-column label="操作" align="center" width="240">
             <template slot-scope="scope">
-              <el-button size="mini" type="primary" icon="el-icon-check" @click="handleApprove(scope.row)">审批</el-button>
+              <el-button v-if="!isCcTask(scope.row.taskName)" size="mini" type="primary" icon="el-icon-check" @click="handleApprove(scope.row)">审批</el-button>
+              <el-button v-else size="mini" type="success" icon="el-icon-check" @click="handleDismiss(scope.row)">已阅</el-button>
+              <el-button size="mini" type="text" icon="el-icon-view" @click="handleViewDetail(scope.row)">详情</el-button>
               <el-button size="mini" type="text" icon="el-icon-tickets" @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
             </template>
           </el-table-column>
@@ -95,6 +102,34 @@
           暂无已办记录
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="我发起的" name="mine">
+        <el-table v-loading="loading" :data="mineList" border stripe>
+          <el-table-column label="流程名称" align="center" prop="processName" min-width="140" />
+          <el-table-column label="申请人" align="center" width="100">
+            <template slot-scope="scope">
+              {{ scope.row.variables.applicant || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="流程实例ID" align="center" prop="processInstanceId" min-width="280" show-overflow-tooltip />
+          <el-table-column label="发起时间" align="center" width="170">
+            <template slot-scope="scope">
+              {{ parseTime(scope.row.startTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" align="center" width="160">
+            <template slot-scope="scope">
+              <el-button size="mini" type="warning" icon="el-icon-back"
+                @click="handleWithdraw(scope.row)">撤回</el-button>
+              <el-button size="mini" type="text" icon="el-icon-tickets"
+                @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="mineList.length === 0 && !loading" style="text-align:center;color:#999;padding:40px;">
+          暂无我发起的流程
+        </div>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 审批对话框 -->
@@ -106,15 +141,16 @@
         <el-form-item label="操作">
           <el-radio-group v-model="approveForm.action">
             <el-radio label="approve" style="color: #67C23A;">同意</el-radio>
-            <el-radio label="reject" style="color: #F56C6C;">驳回</el-radio>
+            <el-radio label="reject" style="color: #F56C6C;">直接驳回</el-radio>
+            <el-radio label="rollback" style="color: #E6A23C;">驳回上一步</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="审批意见">
+        <el-form-item label="意见">
           <el-input
             v-model="approveForm.comment"
             type="textarea"
             :rows="3"
-            :placeholder="approveForm.action === 'approve' ? '请输入审批意见（可选）' : '请输入驳回原因'"
+            :placeholder="commentPlaceholder"
           />
         </el-form-item>
         <el-form-item label="加签">
@@ -134,7 +170,7 @@
         <el-timeline-item
           v-for="(item, index) in trackList"
           :key="index"
-          :timestamp="item.endTime ? parseTime(item.endTime) : '审批中...'"
+          :timestamp="item.endTime ? '完成 ' + parseTime(item.endTime) : '审批中...'"
           :color="item.status === 'completed' ? '#67C23A' : '#E6A23C'"
         >
           <div>
@@ -142,11 +178,13 @@
             <el-tag :type="item.status === 'completed' ? 'success' : 'warning'" size="mini" style="margin-left: 8px;">
               {{ item.node }}
             </el-tag>
+            <el-tag v-if="item.action" size="mini" effect="plain"
+              :type="item.action === '驳回' || item.action === '驳回到上一步' ? 'danger' : ''"
+              style="margin-left:4px;">{{ item.action }}</el-tag>
             <span v-if="item.status === 'pending'" style="color:#E6A23C;margin-left:8px;font-size:12px;">⏳ 审批中</span>
           </div>
-          <div v-if="item.startTime" style="margin-top: 4px; color: #999; font-size: 13px;">
-            {{ parseTime(item.startTime) }}
-            <span v-if="item.endTime"> ~ {{ parseTime(item.endTime) }}</span>
+          <div v-if="item.comment" style="margin-top: 2px; color: #666; font-size: 13px;">
+            审批意见：{{ item.comment }}
           </div>
         </el-timeline-item>
       </el-timeline>
@@ -154,25 +192,34 @@
         暂无审批记录
       </div>
     </el-dialog>
+
+    <!-- 查看详情对话框 -->
+    <el-dialog title="流程详情" :visible.sync="detailOpen" width="500px" append-to-body>
+      <component v-if="detailFormName" :is="detailFormName" ref="detailForm"
+        :form-data="detailFormData" :readonly="true" />
+      <div v-else style="text-align:center;color:#999;padding:20px;">无法加载表单</div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, getProcessTrack } from "@/api/workflow/flowable"
-import request from "@/utils/request"
+import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, rollbackTask, addSign, dismissTask, getProcessTrack, listRunningProcesses, withdrawProcess } from "@/api/workflow/flowable"
+import formRegistry from "@/views/workflow/apply/formRegistry"
 
 export default {
   name: "FlowableTask",
+  components: Object.fromEntries(
+    Object.entries(formRegistry).map(([k, v]) => [v.name, v.component])
+  ),
   data() {
     return {
       loading: false,
       showSearch: true,
       activeTab: 'todo',
-      queryParams: {
-        assignee: undefined
-      },
+      queryParams: { assignee: undefined },
       todoList: [],
       historyList: [],
+      mineList: [],
       approveOpen: false,
       approveForm: {
         action: 'approve',
@@ -182,37 +229,45 @@ export default {
       signLoading: false,
       currentTask: { variables: {} },
       trackOpen: false,
-      trackList: []
+      trackList: [],
+      detailOpen: false,
+      detailFormName: null,
+      detailFormData: {}
     }
   },
   created() {
-    this.queryParams.assignee = this.$store.state.user.name
     this.loadTodo()
+  },
+  computed: {
+    commentPlaceholder() {
+      const map = { approve: '审批意见（可选）', reject: '驳回原因', rollback: '退回原因' }
+      return map[this.approveForm.action] || ''
+    }
   },
   methods: {
     handleTabClick(tab) {
       if (tab.name === 'todo') {
         this.loadTodo()
-      } else {
+      } else if (tab.name === 'history') {
         this.loadHistory()
+      } else {
+        this.loadMine()
       }
     },
     handleQuery() {
       if (this.activeTab === 'todo') {
         this.loadTodo()
-      } else {
+      } else if (this.activeTab === 'history') {
         this.loadHistory()
+      } else {
+        this.loadMine()
       }
     },
     resetQuery() {
-      this.queryParams.assignee = this.$store.state.user.name
+      this.queryParams.assignee = undefined
       this.handleQuery()
     },
     loadTodo() {
-      if (!this.queryParams.assignee) {
-        this.todoList = []
-        return
-      }
       this.loading = true
       listTodoTasks(this.queryParams.assignee).then(res => {
         this.todoList = res.data || []
@@ -222,10 +277,6 @@ export default {
       })
     },
     loadHistory() {
-      if (!this.queryParams.assignee) {
-        this.historyList = []
-        return
-      }
       this.loading = true
       listHistoryTasks(this.queryParams.assignee).then(res => {
         this.historyList = res.data || []
@@ -234,18 +285,61 @@ export default {
         this.loading = false
       })
     },
+    loadMine() {
+      this.loading = true
+      listRunningProcesses().then(res => {
+        const all = res.data || []
+        const user = this.$store.state.user.name
+        // 过滤当前用户发起的流程（通过变量中的 applicant 判断）
+        this.mineList = all.filter(p => {
+          const vars = p.variables || {}
+          return vars.applicant === user
+        }).map(p => {
+          // 从变量中解析流程名
+          const vars = p.variables || {}
+          const key = vars.processKey || p.processDefinitionKey || ''
+          return { ...p, processName: key, variables: vars }
+        })
+        this.loading = false
+      }).catch(() => { this.loading = false })
+    },
+    handleWithdraw(row) {
+      this.$confirm('确认撤回该流程？', '提示', { type: 'warning' }).then(() => {
+        withdrawProcess(row.processInstanceId).then(res => {
+          this.$message.success(res.data.tip || '已撤回')
+          this.loadMine()
+        }).catch(() => {})
+      }).catch(() => {})
+    },
     handleApprove(row) {
       this.currentTask = row
       this.approveForm = { action: 'approve', comment: '', signUser: '' }
       this.approveOpen = true
     },
+    handleDismiss(row) {
+      dismissTask(row.taskId).then(() => {
+        this.$message.success('已阅')
+        this.loadTodo()
+      }).catch(() => {})
+    },
+    handleViewDetail(row) {
+      const vars = row.variables || {}
+      const processKey = vars.processKey || ''
+      const entry = formRegistry[processKey]
+      if (entry) {
+        this.detailFormName = entry.name
+        this.detailFormData = { ...vars }
+      } else {
+        this.detailFormName = null
+        this.detailFormData = {}
+      }
+      this.detailOpen = true
+    },
     handleAddSign() {
       const user = this.approveForm.signUser.trim()
       if (!user) { this.$message.warning('请输入加签人用户名'); return }
       this.signLoading = true
-      request({ url: '/workflow/task/addSign', method: 'post',
-        params: { taskId: this.currentTask.taskId, assignee: user }
-      }).then(res => {
+      addSign(this.currentTask.taskId, user).then(res => {
         this.$message.success(res.data.tip || '加签成功')
         this.approveForm.signUser = ''
         this.signLoading = false
@@ -255,17 +349,24 @@ export default {
     submitApprove() {
       const { action, comment } = this.approveForm
       const taskId = this.currentTask.taskId
+      const done = () => {
+        this.approveOpen = false
+        this.loadTodo()
+      }
       if (action === 'approve') {
         approveTask(taskId, comment || '同意').then(() => {
           this.$message.success('审批通过')
-          this.approveOpen = false
-          this.loadTodo()
+          done()
+        }).catch(() => {})
+      } else if (action === 'rollback') {
+        rollbackTask(taskId, comment || '需修改').then(() => {
+          this.$message.success('已驳回至上一节点')
+          done()
         }).catch(() => {})
       } else {
         rejectTask(taskId, comment || '不同意').then(() => {
           this.$message.success('已驳回')
-          this.approveOpen = false
-          this.loadTodo()
+          done()
         }).catch(() => {})
       }
     },
@@ -275,6 +376,9 @@ export default {
       getProcessTrack(processInstanceId).then(res => {
         this.trackList = res.data || []
       })
+    },
+    isCcTask(name) {
+      return name && name.startsWith('[抄送]')
     },
 
     formatDuration(ms) {

@@ -32,6 +32,11 @@ public class ProcessDefinitionController extends BaseController {
     @Autowired
     private RepositoryService repositoryService;
 
+    /**
+     * 查询所有最新版本的流程定义列表
+     *
+     * @return [{ id, deploymentId, key, name, version, deployTime, deployer }]
+     */
     @GetMapping("/list")
     public R<List<Map<String, Object>>> list() {
         List<ProcessDefinition> defs = flowableService.listDefinitions();
@@ -47,13 +52,28 @@ public class ProcessDefinitionController extends BaseController {
             m.put("deployTime", deployment != null ? deployment.getDeploymentTime() : null);
             m.put("deployer", deployment != null && deployment.getCategory() != null
                 ? deployment.getCategory() : "系统");
+            // 从 BPMN documentation 提取抄送人
+            try {
+                BpmnModel bpmn = repositoryService.getBpmnModel(d.getId());
+                if (bpmn != null && bpmn.getProcesses() != null && !bpmn.getProcesses().isEmpty()) {
+                    String doc = bpmn.getProcesses().get(0).getDocumentation();
+                    if (doc != null && doc.startsWith("CC:")) {
+                        m.put("ccUsers", Arrays.asList(doc.substring(3).split(",")));
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[workflow] 解析BPMN抄送人失败(key=" + d.getKey() + "): " + e.getMessage());
+            }
             return m;
         }).toList();
         return R.ok(list);
     }
 
     /**
-     * 表格配置部署 —�?前端传节�?连线 JSON，后端直接用 Java DSL 部署
+     * 表格配置部署 —— 前端传节点 + 连线 JSON，后端用 Java DSL 构建并部署 BPMN
+     *
+     * @param config 流程配置 DTO（含 key、name、nodes、lines）
+     * @return { deploymentId, processName, processKey, message }
      */
     @PostMapping("/deploy-table")
     public R<Map<String, Object>> deployFromTable(@RequestBody ProcessConfigDTO config) {
@@ -67,19 +87,29 @@ public class ProcessDefinitionController extends BaseController {
         return R.ok(result);
     }
 
-    /** 删除指定版本的流程定义（级联删除部署及运行中实例�?*/
+    /**
+     * 删除指定版本的流程定义（级联删除部署及运行中实例）
+     *
+     * @param deploymentId 部署 ID
+     * @return 操作结果
+     */
     @DeleteMapping("/{deploymentId}")
     public R<String> delete(@PathVariable String deploymentId) {
         repositoryService.deleteDeployment(deploymentId, true);
         return R.ok("删除成功");
     }
 
-    /** 应用某版�?—�?克隆�?BPMN 模型重新部署，成为最新版�?*/
+    /**
+     * 应用某版本 —— 克隆指定部署的 BPMN 模型重新部署，使其成为最新版本
+     *
+     * @param deploymentId 部署 ID
+     * @return { message, version }
+     */
     @PostMapping("/{deploymentId}/apply")
     public R<Map<String, Object>> apply(@PathVariable String deploymentId) {
         ProcessDefinition pd = repositoryService.createProcessDefinitionQuery()
                 .deploymentId(deploymentId).singleResult();
-        if (pd == null) return R.fail("流程定义不存在");
+        if (pd == null) return R.fail("流程定义不存在，deploymentId=" + deploymentId);
 
         BpmnModel model = repositoryService.getBpmnModel(pd.getId());
         String deployUser = getUsername();
@@ -99,12 +129,17 @@ public class ProcessDefinitionController extends BaseController {
         return R.ok(result);
     }
 
-    /** 提取流程配置 —�?从已部署�?BPMN 模型反向解析出节点和连线 */
+    /**
+     * 提取流程配置 —— 从已部署的 BPMN 模型反向解析出节点和连线，供前端编辑复用
+     *
+     * @param deploymentId 部署 ID
+     * @return ProcessConfigDTO（含 nodes、lines）
+     */
     @GetMapping("/{deploymentId}/config")
     public R<ProcessConfigDTO> getConfig(@PathVariable String deploymentId) {
         ProcessDefinition pd = repositoryService.createProcessDefinitionQuery()
                 .deploymentId(deploymentId).singleResult();
-        if (pd == null) return R.fail("流程定义不存在");
+        if (pd == null) return R.fail("流程定义不存在，deploymentId=" + deploymentId);
 
         BpmnModel model = repositoryService.getBpmnModel(pd.getId());
         Process process = model.getProcesses().get(0);
@@ -122,7 +157,24 @@ public class ProcessDefinitionController extends BaseController {
             nd.setName(el.getName());
             if (el instanceof StartEvent) nd.setType("startEvent");
             else if (el instanceof EndEvent) nd.setType("endEvent");
-            else if (el instanceof UserTask ut) { nd.setType("userTask"); nd.setAssignee(ut.getAssignee()); }
+            else if (el instanceof UserTask ut) {
+                nd.setType("userTask");
+                // 检测会签节点
+                var loop = ut.getLoopCharacteristics();
+                if (loop instanceof org.flowable.bpmn.model.MultiInstanceLoopCharacteristics) {
+                    var mi = (org.flowable.bpmn.model.MultiInstanceLoopCharacteristics) loop;
+                    if (mi.getInputDataItem() != null) {
+                        // inputDataItem 形如 ${["lisi","wangwu"]}，提取出列表
+                        String expr = mi.getInputDataItem();
+                        String inner = expr.replaceAll("[\\$\\{\\}\\[\\]\"]", ""); // → lisi,wangwu
+                        nd.setAssigneeList(Arrays.asList(inner.split(",")));
+                    } else {
+                        nd.setAssignee(ut.getAssignee());
+                    }
+                } else {
+                    nd.setAssignee(ut.getAssignee());
+                }
+            }
             else if (el instanceof ExclusiveGateway) nd.setType("exclusiveGateway");
             else continue;
             nodes.add(nd);
@@ -147,7 +199,12 @@ public class ProcessDefinitionController extends BaseController {
         return R.ok(config);
     }
 
-    /** 查询指定 key 的所有历史版�?*/
+    /**
+     * 查询指定 key 的所有历史版本
+     *
+     * @param processKey 流程标识 key
+     * @return [{ id, deploymentId, version, deployTime, deployer }]
+     */
     @GetMapping("/history/{processKey}")
     public R<List<Map<String, Object>>> history(@PathVariable String processKey) {
         List<ProcessDefinition> defs = repositoryService.createProcessDefinitionQuery()

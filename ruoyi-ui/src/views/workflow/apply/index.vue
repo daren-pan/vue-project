@@ -23,7 +23,7 @@
     <!-- 发起弹窗 -->
     <el-dialog :title="'发起 - ' + currentProcess.name" :visible.sync="applyOpen"
       width="500px" :close-on-click-modal="false" @closed="currentProcess={}">
-      <component v-if="currentProcess.key" :is="componentName" ref="applyForm" :applicant="loginUser" />
+      <component v-if="currentProcess.key" :is="componentName" ref="applyForm" />
       <div v-else-if="applyOpen && !currentProcess.key" style="text-align:center;color:#999;padding:40px;">
         该流程暂未配置申请表单
       </div>
@@ -40,8 +40,7 @@
 </template>
 
 <script>
-import { listDefinitions } from "@/api/workflow/flowable"
-import request from "@/utils/request"
+import { listDefinitions, startProcess } from "@/api/workflow/flowable"
 import formRegistry from "./formRegistry"
 
 export default {
@@ -54,8 +53,7 @@ export default {
       loading: false,
       processList: [],
       applyOpen: false,
-      currentProcess: {},
-      loginUser: ''
+      currentProcess: {}
     }
   },
   computed: {
@@ -65,7 +63,6 @@ export default {
     }
   },
   created() {
-    this.loginUser = this.$store.state.user.name
     this.getList()
   },
   methods: {
@@ -91,11 +88,12 @@ export default {
       if (!form) return
       form.validate(valid => {
         if (!valid) return
-        request({
-          url: '/workflow/instance/start',
-          method: 'post',
-          params: { ...form.getData(), processKey: this.currentProcess.key }
-        }).then(res => {
+        const data = form.getData()
+        // 流程定义的抄送人
+        if (this.currentProcess.ccUsers) {
+          data.ccUsers = this.currentProcess.ccUsers
+        }
+        startProcess(this.currentProcess.key, data).then(res => {
           this.$message.success(res.data.tip || '流程已发起')
           this.applyOpen = false
         }).catch(() => {})

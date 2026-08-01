@@ -7,6 +7,7 @@ import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.workflow.service.FlowableService;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.engine.task.Comment;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,33 +29,45 @@ public class ProcessInstanceController extends BaseController {
     @Autowired
     private RemoteUserService remoteUserService;
 
+    @Autowired
+    private org.flowable.engine.TaskService taskService;
+
     /**
-     * 通用发起流程
-     * <p>
-     * 前端只传业务参数，后端自动查审批链（部门经理、上级领导），找不到默认 admin。
+     * 通用发起流程（JSON body）
+     * <pre>
+     * {
+     *   "processKey": "leave",    // 必填，流程标识
+     *   "applicant": "张三",       // 必填，申请人
+     *   "days": 3,                // 业务参数，自动进入流程变量
+     *   "reason": "个人原因"        // 其他业务参数...
+     * }
+     * </pre>
+     * 后端自动查审批链（部门经理 deptLeader、上级领导 parentDeptLeader），找不到默认 admin。
      *
-     * @param processKey 流程标识，必填，如 "leave"、"cost"
-     * @param applicant  申请人用户名，必填，用于查询组织架构中的审批链
-     * @param allParams  业务参数 Map，Spring 自动收集所有未匹配的 @RequestParam，
-     *                   如 days=3、amount=5000 等，会合并到流程变量中
-     * @return { processInstanceId: "xxx", tip: "流程已发起" }
+     * @return { processInstanceId, tip }
      */
     @PostMapping("/start")
-    public R<Map<String, Object>> start(@RequestParam String processKey,
-                                         @RequestParam String applicant,
-                                         @RequestParam Map<String, Object> allParams) {
+    public R<Map<String, Object>> start(@RequestBody Map<String, Object> body) {
+        String processKey = (String) body.remove("processKey");
+        String applicant = (String) body.remove("applicant");
+        if (processKey == null || applicant == null) {
+            return R.fail("processKey 和 applicant 不能为空");
+        }
+
         Map<String, String> approvers = Map.of("deptLeader", "admin", "parentDeptLeader", "admin");
         try {
             R<Map<String, String>> r = remoteUserService.getApprovers(applicant, SecurityConstants.FROM_SOURCE);
             if (r != null && r.getData() != null) approvers = r.getData();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("[workflow] 获取审批链失败(applicant=" + applicant + "): " + e.getMessage());
+        }
 
-        Map<String, Object> vars = new HashMap<>(allParams);
-        vars.remove("processKey");
-        vars.put("deptLeader", approvers.get("deptLeader"));
-        vars.put("parentDeptLeader", approvers.get("parentDeptLeader"));
+        // 剩下的 body 字段即为业务变量
+        body.put("applicant", applicant);
+        body.put("deptLeader", approvers.get("deptLeader"));
+        body.put("parentDeptLeader", approvers.get("parentDeptLeader"));
 
-        ProcessInstance instance = flowableService.startProcess(processKey, vars);
+        ProcessInstance instance = flowableService.startProcess(processKey, body);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("processInstanceId", instance.getId());
         result.put("tip", "流程已发起");
@@ -116,10 +129,10 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 查询审批轨迹（所有历史任务节点）
+     * 查询审批轨迹 —— 返回发起记录 + 已完成节点 + 待审批节点（含加签任务），前端按 status 着色
      *
      * @param processInstanceId 流程实例 ID
-     * @return [{ taskId, taskName, assignee, startTime, endTime, duration }]
+     * @return [{ node, assignee, startTime, endTime, status: "completed"|"pending" }]
      */
     @GetMapping("/{processInstanceId}/track")
     public R<List<Map<String, Object>>> track(@PathVariable String processInstanceId) {
@@ -138,17 +151,32 @@ public class ProcessInstanceController extends BaseController {
         start.put("status", "completed");
         list.add(start);
 
-        // 2. 已完成节点（只取已完成的）
+        // 2. 已完成节点
         List<HistoricTaskInstance> tasks = flowableService.listProcessTrack(processInstanceId);
         Set<String> added = new HashSet<>();
         tasks.forEach(t -> {
-            if (t.getEndTime() == null) return; // 跳过未完成的
+            if (t.getEndTime() == null) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("node", t.getName());
             m.put("assignee", t.getAssignee());
             m.put("startTime", t.getStartTime());
             m.put("endTime", t.getEndTime());
             m.put("status", "completed");
+            // 查询审批意见
+            try {
+                List<Comment> comments = taskService.getTaskComments(t.getId());
+                if (comments != null && !comments.isEmpty()) {
+                    String msg = comments.get(0).getFullMessage();
+                    m.put("comment", msg);
+                    // 自动识别操作类型
+                    if (msg != null) {
+                        if (msg.contains("驳回上一步")) m.put("action", "驳回到上一步");
+                        else if (msg.contains("驳回")) m.put("action", "驳回");
+                        else if (msg.contains("加签审批")) m.put("action", "加签通过");
+                        else m.put("action", "通过");
+                    }
+                }
+            } catch (Exception ignored) {}
             list.add(m);
             added.add(t.getName() + t.getAssignee());
         });
@@ -170,64 +198,33 @@ public class ProcessInstanceController extends BaseController {
     }
 
     /**
-     * 一键演示：≤3天请假（无需总监审批）
-     * <p>
-     * 自动发起→审批→完成，用于快速测试流程。
+     * 撤回流程 —— 仅申请人可撤回尚未被审批的流程
      *
-     * @return { processInstanceId, steps: [{ step, desc }] }
+     * @param processInstanceId 流程实例 ID
+     * @return { processInstanceId, action }
      */
-    @PostMapping("/demo/simple")
-    public R<Map<String, Object>> demoSimple() {
-        Map<String, Object> vars = Map.of("applicant", "张三", "days", 2, "manager", "李四", "director", "王五");
-        ProcessInstance instance = flowableService.startProcess("leave", vars);
+    @PostMapping("/{processInstanceId}/withdraw")
+    public R<Map<String, Object>> withdraw(@PathVariable String processInstanceId) {
+        ProcessInstance pi = flowableService.getProcessInstance(processInstanceId);
+        if (pi == null) return R.fail("流程「" + processInstanceId + "」已结束或不存在，请检查流程实例ID");
 
-        List<Map<String, String>> steps = new ArrayList<>();
-        steps.add(Map.of("step", "1", "desc", "张三发起2天请假"));
+        Map<String, Object> vars = flowableService.getVariables(processInstanceId);
+        String applicant = (String) vars.getOrDefault("applicant", "");
+        String currentUser = SecurityUtils.getUsername();
 
-        var tasks = flowableService.listTasksByInstance(instance.getId());
-        if (!tasks.isEmpty()) {
-            flowableService.completeTask(tasks.get(0).getId());
-            steps.add(Map.of("step", "2", "desc", "李四审批通过"));
+        if (!currentUser.equals(applicant)) {
+            return R.fail("当前用户「" + currentUser + "」不是申请人「" + applicant + "」，仅申请人可撤回");
         }
 
-        boolean done = flowableService.getProcessInstance(instance.getId()) == null;
-        steps.add(Map.of("step", "3", "desc", done ? "流程已完成（≤3天无需总监）" : "仍在运行"));
-
-        return R.ok(Map.of("processInstanceId", instance.getId(), "steps", steps));
-    }
-
-    /**
-     * 一键演示：>3天请假（需总监审批）
-     * <p>
-     * 自动发起→经理审批→总监审批→完成，用于快速测试完整流程。
-     *
-     * @return { processInstanceId, steps: [{ step, desc }] }
-     */
-    @PostMapping("/demo/full")
-    public R<Map<String, Object>> demoFull() {
-        Map<String, Object> vars = Map.of("applicant", "张三", "days", 5, "manager", "李四", "director", "王五");
-        ProcessInstance instance = flowableService.startProcess("leave", vars);
-
-        List<Map<String, String>> steps = new ArrayList<>();
-        steps.add(Map.of("step", "1", "desc", "张三发起5天请假, 流程ID: " + instance.getId()));
-
-        var tasks = flowableService.listTasksByInstance(instance.getId());
-        if (!tasks.isEmpty()) {
-            flowableService.addComment(tasks.get(0).getId(), instance.getId(), "同意");
-            flowableService.completeTask(tasks.get(0).getId());
-            steps.add(Map.of("step", "2", "desc", "李四(部门经理)审批通过"));
+        List<HistoricTaskInstance> finished = flowableService.listFinishedTasks(processInstanceId);
+        if (finished != null && !finished.isEmpty()) {
+            return R.fail("流程「" + processInstanceId + "」已有审批记录（共" + finished.size() + "条），无法撤回");
         }
 
-        tasks = flowableService.listTasksByInstance(instance.getId());
-        if (!tasks.isEmpty()) {
-            flowableService.addComment(tasks.get(0).getId(), instance.getId(), "批准");
-            flowableService.completeTask(tasks.get(0).getId());
-            steps.add(Map.of("step", "3", "desc", "王五(总监)审批通过"));
-        }
-
-        boolean done = flowableService.getProcessInstance(instance.getId()) == null;
-        steps.add(Map.of("step", "4", "desc", done ? "流程已完成" : "仍在运行"));
-
-        return R.ok(Map.of("processInstanceId", instance.getId(), "steps", steps));
+        flowableService.deleteProcessInstance(processInstanceId, "申请人撤回");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("processInstanceId", processInstanceId);
+        result.put("action", "撤回");
+        return R.ok(result);
     }
 }

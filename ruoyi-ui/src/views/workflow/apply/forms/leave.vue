@@ -1,8 +1,5 @@
 <template>
-  <el-form ref="form" :model="data" :rules="rules" label-width="100px" size="small">
-    <el-form-item label="申请人" prop="applicant">
-      <el-input v-model="data.applicant" placeholder="请输入申请人" />
-    </el-form-item>
+  <el-form ref="form" :model="data" :rules="rules" label-width="100px" size="small" :disabled="readonly">
     <el-form-item label="请假天数" prop="days">
       <el-input-number v-model="data.days" :min="1" :max="30" />
       <span style="margin-left:10px;color:#999;">>3天需总监审批</span>
@@ -14,18 +11,22 @@
 export default {
   name: "LeaveApply",
   props: {
-    applicant: { type: String, default: '' }
+    formData: { type: Object, default: () => ({}) },
+    readonly: { type: Boolean, default: false }
   },
   data() {
     return {
-      data: { applicant: this.applicant, days: 1 },
-      rules: {
-        applicant: [{ required: true, message: '请输入申请人', trigger: 'blur' }]
-      }
+      data: { days: this.formData.days || 1 },
+      rules: {}
     }
   },
   watch: {
-    applicant(val) { this.data.applicant = val }
+    formData: {
+      immediate: true,
+      handler(val) {
+        if (val && val.days) this.data.days = val.days
+      }
+    }
   },
   methods: {
     getData() { return { ...this.data } },

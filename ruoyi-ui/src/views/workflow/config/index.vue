@@ -16,6 +16,10 @@
       <el-form :inline="true" size="mini">
         <el-form-item label="流程标识" required><el-input v-model="form.processKey" placeholder="如 leave" /></el-form-item>
         <el-form-item label="流程名称" required><el-input v-model="form.processName" placeholder="如 请假审批" /></el-form-item>
+        <el-form-item label="抄送人">
+          <el-button size="mini" icon="el-icon-user" @click="openCcDialog">选择抄送人{{ form.ccUsers && form.ccUsers.length ? '(' + form.ccUsers.length + '人)' : '' }}</el-button>
+          <el-tag v-for="u in (form._ccUsers||[])" :key="u" size="small" style="margin-left:4px;">{{ u }}</el-tag>
+        </el-form-item>
       </el-form>
     </el-card>
 
@@ -46,16 +50,23 @@
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="审批人" prop="assignee" min-width="240">
+        <el-table-column label="审批人" prop="assignee" min-width="380">
           <template slot-scope="s">
             <template v-if="s.row.type === 'userTask'">
-              <el-radio-group v-model="s.row._assigneeType" size="mini" @change="onAssigneeTypeChange(s.row)">
-                <el-radio label="deptLeader">部门经理</el-radio>
-                <el-radio label="parentDeptLeader">上级领导</el-radio>
-                <el-radio label="manual">手动指定</el-radio>
-              </el-radio-group>
-              <el-input v-if="s.row._assigneeType === 'manual'" v-model="s.row.assignee" size="mini"
-                placeholder="输入用户名" style="width:120px;margin-top:4px;" />
+              <div style="display:flex;align-items:center;flex-wrap:nowrap;gap:2px;white-space:nowrap;">
+                <el-radio v-model="s.row._assigneeType" label="deptLeader" size="mini" @change="onAssigneeTypeChange(s.row)">部门经理</el-radio>
+                <el-radio v-model="s.row._assigneeType" label="parentDeptLeader" size="mini" @change="onAssigneeTypeChange(s.row)">上级领导</el-radio>
+                <el-radio v-model="s.row._assigneeType" label="manual" size="mini" @change="onAssigneeTypeChange(s.row)">手动指定</el-radio>
+                <el-input v-if="s.row._assigneeType === 'manual'" v-model="s.row.assignee" size="mini"
+                  placeholder="用户名" style="width:120px;" />
+                <el-radio v-model="s.row._assigneeType" label="countersign" size="mini" @change="onAssigneeTypeChange(s.row)">会签</el-radio>
+                <template v-if="s.row._assigneeType === 'countersign'">
+                  <el-button size="mini" icon="el-icon-user" @click="openSignDialog(s.row)">
+                    选择会签人{{ (s.row._signUsers||[]).length ? '(' + s.row._signUsers.length + '人)' : '' }}
+                  </el-button>
+                  <el-tag v-for="u in (s.row._signUsers||[])" :key="u" size="small">{{ u }}</el-tag>
+                </template>
+              </div>
             </template>
             <span v-else style="color:#999;">-</span>
           </template>
@@ -67,6 +78,50 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 会签选人弹框 -->
+    <el-dialog title="选择会签人" :visible.sync="signDialogOpen" width="450px" append-to-body>
+      <div style="margin-bottom:10px;">
+        <el-tag v-for="(u,i) in (signTargetRow && signTargetRow._signUsers || [])" :key="u" closable size="small"
+          style="margin:2px 4px 2px 0;" @close="signTargetRow._signUsers.splice(i,1)">
+          {{ u }}
+        </el-tag>
+      </div>
+      <el-autocomplete v-model="signSearch" :fetch-suggestions="(q,cb)=>searchUser(q,cb)"
+        placeholder="输入用户名搜索" style="width:100%;"
+        @select="item => onSignSelect(item)" clearable>
+        <template slot-scope="{ item }">
+          <span>{{ item.userName }}</span>
+          <span style="color:#999;margin-left:8px;">{{ item.nickName }}</span>
+        </template>
+      </el-autocomplete>
+      <div slot="footer">
+        <el-button type="primary" @click="confirmSignSelect">确 定</el-button>
+        <el-button @click="signDialogOpen = false">取 消</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 抄送人弹框 -->
+    <el-dialog title="选择抄送人" :visible.sync="ccDialogOpen" width="450px" append-to-body>
+      <div style="margin-bottom:10px;">
+        <el-tag v-for="(u,i) in (ccSelecting || [])" :key="u" closable size="small"
+          style="margin:2px 4px 2px 0;" @close="ccSelecting.splice(i,1)">
+          {{ u }}
+        </el-tag>
+      </div>
+      <el-autocomplete v-model="ccSearch" :fetch-suggestions="(q,cb)=>searchUser(q,cb)"
+        placeholder="输入用户名搜索" style="width:100%;"
+        @select="item => { if (!ccSelecting.includes(item.userName)) ccSelecting.push(item.userName); ccSearch='' }" clearable>
+        <template slot-scope="{ item }">
+          <span>{{ item.userName }}</span>
+          <span style="color:#999;margin-left:8px;">{{ item.nickName }}</span>
+        </template>
+      </el-autocomplete>
+      <div slot="footer">
+        <el-button type="primary" @click="confirmCcSelect">确 定</el-button>
+        <el-button @click="ccDialogOpen = false">取 消</el-button>
+      </div>
+    </el-dialog>
 
     <!-- 连线列表 -->
     <el-card shadow="never">
@@ -106,15 +161,23 @@
 
 <script>
 import { deployTable } from "@/api/workflow/flowable"
+import { listUser } from "@/api/system/user"
 
 export default {
   name: "FlowableTableConfig",
   data() {
     return {
       deploying: false,
+      signDialogOpen: false,
+      signSearch: '',
+      signTargetRow: null,
+      ccDialogOpen: false,
+      ccSearch: '',
+      ccSelecting: [],
       form: {
         processKey: '',
         processName: '',
+        ccUsers: [],
         nodes: [],
         lines: []
       }
@@ -125,6 +188,7 @@ export default {
       const cfg = JSON.parse(this.$route.query.config)
       this.form.processKey = cfg.processKey || ''
       this.form.processName = cfg.processName || ''
+      this.form.ccUsers = cfg.ccUsers || []
       this.form.nodes = (cfg.nodes || []).map(n => this.initNode(n))
       // 反向转换 le/lt/gt/ge/ne → <=/</>/>=/!= 便于阅读
       this.form.lines = (cfg.lines || []).map(l => {
@@ -141,7 +205,10 @@ export default {
   methods: {
     initNode(n) {
       if (n.type === 'userTask') {
-        if (n.assignee === '${deptLeader}') n._assigneeType = 'deptLeader'
+        if (n.assigneeList && n.assigneeList.length > 0) {
+          n._assigneeType = 'countersign'
+          n._signUsers = [...n.assigneeList]
+        } else if (n.assignee === '${deptLeader}') n._assigneeType = 'deptLeader'
         else if (n.assignee === '${parentDeptLeader}') n._assigneeType = 'parentDeptLeader'
         else { n._assigneeType = 'manual'; if (!n.assignee) n.assignee = '' }
       }
@@ -156,7 +223,41 @@ export default {
     onAssigneeTypeChange(row) {
       if (row._assigneeType === 'deptLeader') row.assignee = '${deptLeader}'
       else if (row._assigneeType === 'parentDeptLeader') row.assignee = '${parentDeptLeader}'
-      else row.assignee = ''
+      else if (row._assigneeType === 'countersign') {
+        if (!row._signUsers) this.$set(row, '_signUsers', [])
+      } else row.assignee = ''
+    },
+    searchUser(query, cb) {
+      if (!query || query.length < 1) { cb([]); return }
+      listUser({ userName: query, pageNum: 1, pageSize: 10 }).then(res => {
+        cb((res.rows || []).map(u => ({ value: u.userName, userName: u.userName, nickName: u.nickName })))
+      }).catch(() => cb([]))
+    },
+    openSignDialog(row) {
+      this.signTargetRow = row
+      this.signSearch = ''
+      this.signDialogOpen = true
+    },
+    onSignSelect(item) {
+      const row = this.signTargetRow
+      if (!row._signUsers) this.$set(row, '_signUsers', [])
+      if (!row._signUsers.includes(item.userName)) {
+        row._signUsers.push(item.userName)
+      }
+      this.signSearch = ''
+    },
+    confirmSignSelect() {
+      this.signDialogOpen = false
+    },
+    openCcDialog() {
+      this.ccSelecting = [...(this.form.ccUsers || [])]
+      this.ccSearch = ''
+      this.ccDialogOpen = true
+    },
+    confirmCcSelect() {
+      this.form.ccUsers = [...this.ccSelecting]
+      this.form._ccUsers = [...this.ccSelecting]
+      this.ccDialogOpen = false
     },
     handleAddLine() {
       this.form.lines.push({ from: '', to: '', condition: '' })
@@ -170,7 +271,17 @@ export default {
         this.deploying = true
         // 清理前端临时字段
         const payload = JSON.parse(JSON.stringify(this.form))
-        payload.nodes.forEach(n => delete n._assigneeType)
+        payload.ccUsers = [...(this.form.ccUsers || [])]
+        delete payload._ccUsers
+        payload.nodes.forEach(n => {
+          delete n._assigneeType
+          // 会签: 将 _signUsers 转为 assigneeList
+          if (n._signUsers && n._signUsers.length > 0) {
+            n.assigneeList = [...n._signUsers]
+            delete n._signUsers
+            delete n.assignee
+          }
+        })
         // 条件表达式 < > 会被 HTML 吃掉，前端先转成 Flowable 文本运算符
         payload.lines.forEach(l => {
           if (l.condition) {

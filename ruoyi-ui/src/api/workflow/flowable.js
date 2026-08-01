@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import store from '@/store'
 
 /**
  * Flowable 工作流 API
@@ -59,11 +60,16 @@ export function getHistoryVersions(processKey) {
 
 // ==================== 流程实例 ====================
 
-export function startLeave(data) {
+/**
+ * 通用发起流程 —— 只需传 processKey + 业务变量，applicant 自动注入
+ * @param {string} processKey 流程标识，如 "leave"、"cost"
+ * @param {Object} data       业务变量，如 { days: 3, reason: "个人原因" }
+ */
+export function startProcess(processKey, data = {}) {
   return request({
-    url: '/workflow/instance/leave/start',
+    url: '/workflow/instance/start',
     method: 'post',
-    params: data
+    data: { processKey, applicant: store.state.user.name, ...data }
   })
 }
 
@@ -88,17 +94,37 @@ export function getProcessTrack(processInstanceId) {
   })
 }
 
+/**
+ * 撤回流程 —— 仅申请人可撤回尚未被审批的流程
+ * @param {string} processInstanceId 流程实例 ID
+ */
+export function withdrawProcess(processInstanceId) {
+  return request({
+    url: '/workflow/instance/' + processInstanceId + '/withdraw',
+    method: 'post'
+  })
+}
+
 // ==================== 待办任务 ====================
 
+/**
+ * 查询待办任务（含加签任务），附带审批进度预览
+ * @param {string} assignee 可选，默认当前用户；传指定用户名可查他人待办
+ */
 export function listTodoTasks(assignee) {
   return request({
     url: '/workflow/task/todo',
     method: 'get',
-    params: { assignee }
+    params: { assignee: assignee || store.state.user.name }
   })
 }
 
-export function approveTask(taskId, comment) {
+/**
+ * 审批通过（支持并行加签）
+ * @param {string} taskId  任务 ID
+ * @param {string} comment 审批意见，默认 "同意"
+ */
+export function approveTask(taskId, comment = '同意') {
   return request({
     url: '/workflow/task/approve',
     method: 'post',
@@ -106,7 +132,12 @@ export function approveTask(taskId, comment) {
   })
 }
 
-export function rejectTask(taskId, reason) {
+/**
+ * 审批驳回 —— 直接删除流程实例
+ * @param {string} taskId 任务 ID
+ * @param {string} reason 驳回原因，默认 "不同意"
+ */
+export function rejectTask(taskId, reason = '不同意') {
   return request({
     url: '/workflow/task/reject',
     method: 'post',
@@ -114,10 +145,52 @@ export function rejectTask(taskId, reason) {
   })
 }
 
+/**
+ * 驳回上一节点 —— 流程回退到上一个审批人
+ * @param {string} taskId 任务 ID
+ * @param {string} reason 驳回原因，默认 "需修改"
+ */
+export function rollbackTask(taskId, reason = '需修改') {
+  return request({
+    url: '/workflow/task/rollback',
+    method: 'post',
+    params: { taskId, reason }
+  })
+}
+
+/**
+ * 加签 —— 在当前任务旁新增并行审批人
+ * @param {string} taskId   当前任务 ID
+ * @param {string} assignee 加签人用户名
+ */
+export function addSign(taskId, assignee) {
+  return request({
+    url: '/workflow/task/addSign',
+    method: 'post',
+    params: { taskId, assignee }
+  })
+}
+
+/**
+ * 关闭抄送任务（已阅）
+ * @param {string} taskId 任务 ID
+ */
+export function dismissTask(taskId) {
+  return request({
+    url: '/workflow/task/dismiss',
+    method: 'post',
+    params: { taskId }
+  })
+}
+
+/**
+ * 查询已办历史
+ * @param {string} assignee 可选，默认当前用户；传指定用户名可查他人已办
+ */
 export function listHistoryTasks(assignee) {
   return request({
     url: '/workflow/task/history',
     method: 'get',
-    params: { assignee }
+    params: { assignee: assignee || store.state.user.name }
   })
 }
