@@ -87,14 +87,16 @@
           {{ u }}
         </el-tag>
       </div>
-      <el-autocomplete v-model="signSearch" :fetch-suggestions="(q,cb)=>searchUser(q,cb)"
-        placeholder="输入用户名搜索" style="width:100%;"
-        @select="item => onSignSelect(item)" clearable>
-        <template slot-scope="{ item }">
-          <span>{{ item.userName }}</span>
-          <span style="color:#999;margin-left:8px;">{{ item.nickName }}</span>
-        </template>
-      </el-autocomplete>
+      <div style="margin-bottom:6px;">
+        <el-button size="mini" @click="addSignVar('${deptLeader}')">+部门经理</el-button>
+        <el-button size="mini" @click="addSignVar('${parentDeptLeader}')">+上级领导</el-button>
+        <el-button size="mini" @click="addSignVar('${applicant}')">+申请人</el-button>
+      </div>
+      <div style="display:flex;">
+        <el-input v-model="signSearch" placeholder="输入用户名或变量" size="mini" style="flex:1;"
+          @keyup.enter.native="addSignInput" />
+        <el-button size="mini" @click="addSignInput" style="margin-left:6px;">添加</el-button>
+      </div>
       <div slot="footer">
         <el-button type="primary" @click="confirmSignSelect">确 定</el-button>
         <el-button @click="signDialogOpen = false">取 消</el-button>
@@ -161,7 +163,6 @@
 
 <script>
 import { deployTable } from "@/api/workflow/flowable"
-import { listUser } from "@/api/system/user"
 
 export default {
   name: "FlowableTableConfig",
@@ -227,24 +228,25 @@ export default {
         if (!row._signUsers) this.$set(row, '_signUsers', [])
       } else row.assignee = ''
     },
-    searchUser(query, cb) {
-      if (!query || query.length < 1) { cb([]); return }
-      listUser({ userName: query, pageNum: 1, pageSize: 10 }).then(res => {
-        cb((res.rows || []).map(u => ({ value: u.userName, userName: u.userName, nickName: u.nickName })))
-      }).catch(() => cb([]))
-    },
     openSignDialog(row) {
       this.signTargetRow = row
       this.signSearch = ''
       this.signDialogOpen = true
     },
-    onSignSelect(item) {
+    addSignInput() {
+      const v = this.signSearch.trim()
+      if (!v) return
       const row = this.signTargetRow
       if (!row._signUsers) this.$set(row, '_signUsers', [])
-      if (!row._signUsers.includes(item.userName)) {
-        row._signUsers.push(item.userName)
-      }
+      if (!row._signUsers.includes(v)) row._signUsers.push(v)
       this.signSearch = ''
+    },
+    addSignVar(v) {
+      const row = this.signTargetRow
+      if (!row._signUsers) this.$set(row, '_signUsers', [])
+      if (!row._signUsers.includes(v)) {
+        row._signUsers.push(v)
+      }
     },
     confirmSignSelect() {
       this.signDialogOpen = false
@@ -293,6 +295,9 @@ export default {
         })
         deployTable(payload).then(() => {
           this.$message.success('部署成功')
+          this.$store.dispatch('tagsView/delView', this.$route).then(() => {
+            this.$router.push({ path: '/workflow/definition' })
+          })
         }).finally(() => {
           this.deploying = false
         })

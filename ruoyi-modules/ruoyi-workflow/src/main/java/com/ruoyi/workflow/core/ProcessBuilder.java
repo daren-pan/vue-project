@@ -11,7 +11,6 @@ import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.RepositoryService;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 流程构建部署引擎
@@ -61,23 +60,17 @@ public class ProcessBuilder {
 
     /**
      * 会签节点 —— 多人并行审批，全部通过才推进
-     * @param assigneeList 审批人列表，如 ["lisi","wangwu","zhaoliu"]
      */
     public ProcessBuilder userTaskMulti(String id, String name, List<String> assigneeList) {
         UserTask t = new UserTask();
-        t.setId(id);
-        t.setName(name);
-        t.setAssignee("${assignee}"); // 每个实例的审批人
+        t.setId(id); t.setName(name);
+        t.setAssignee("${assignee}");
 
         MultiInstanceLoopCharacteristics mi = new MultiInstanceLoopCharacteristics();
-        mi.setSequential(false); // 并行（非顺序）
+        mi.setSequential(false);
         mi.setElementVariable("assignee");
-        // 内联列表作为 collection：${["lisi","wangwu"]}
-        String listStr = assigneeList.stream()
-                .map(s -> "\"" + s + "\"")
-                .collect(Collectors.joining(",", "[", "]"));
-        mi.setInputDataItem("${" + listStr + "}");
-        // 全部完成才通过
+        // 引用流程变量，发起时注入
+        mi.setInputDataItem("${assigneeList_" + id + "}");
         mi.setCompletionCondition("${nrOfCompletedInstances == nrOfInstances}");
         t.setLoopCharacteristics(mi);
 
@@ -162,10 +155,18 @@ public class ProcessBuilder {
             pb.flow(line.getFrom(), line.getTo(), line.getCondition());
         }
 
-        // 存储抄送人到 BPMN documentation
+        // 存储抄送人+会签信息到 BPMN documentation
+        StringBuilder doc = new StringBuilder();
         if (config.getCcUsers() != null && !config.getCcUsers().isEmpty()) {
-            pb.process.setDocumentation("CC:" + String.join(",", config.getCcUsers()));
+            doc.append("CC:").append(String.join(",", config.getCcUsers())).append(";");
         }
+        config.getNodes().forEach(n -> {
+            if (n.getAssigneeList() != null && n.getAssigneeList().size() > 1) {
+                doc.append("SIGN:").append(n.getId()).append("=")
+                   .append(String.join(",", n.getAssigneeList())).append(";");
+            }
+        });
+        if (doc.length() > 0) pb.process.setDocumentation(doc.toString());
 
         return pb.deploy(repositoryService, deployUser);
     }

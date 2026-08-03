@@ -57,8 +57,12 @@ public class ProcessDefinitionController extends BaseController {
                 BpmnModel bpmn = repositoryService.getBpmnModel(d.getId());
                 if (bpmn != null && bpmn.getProcesses() != null && !bpmn.getProcesses().isEmpty()) {
                     String doc = bpmn.getProcesses().get(0).getDocumentation();
-                    if (doc != null && doc.startsWith("CC:")) {
-                        m.put("ccUsers", Arrays.asList(doc.substring(3).split(",")));
+                    if (doc != null) {
+                        for (String part : doc.split(";")) {
+                            if (part.startsWith("CC:")) {
+                                m.put("ccUsers", Arrays.asList(part.substring(3).split(",")));
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -150,8 +154,22 @@ public class ProcessDefinitionController extends BaseController {
 
         // 提取节点
         List<ProcessConfigDTO.NodeDef> nodes = new ArrayList<>();
+        // 从 documentation 解析会签配置 SIGN:id=user1,user2
+        Map<String, List<String>> signMap = new HashMap<>();
+        String doc = process.getDocumentation();
+        if (doc != null) {
+            for (String part : doc.split(";")) {
+                if (part.startsWith("SIGN:")) {
+                    String[] kv = part.substring(5).split("=", 2);
+                    if (kv.length == 2) signMap.put(kv[0], Arrays.asList(kv[1].split(",")));
+                }
+            }
+        }
         for (FlowElement el : process.getFlowElements()) {
             if (el instanceof SequenceFlow) continue;
+            // 跳过会签拆分出的子节点（如 approval_2）
+            String baseId = el.getId().replaceAll("_\\d+$", "");
+            if (!baseId.equals(el.getId()) && signMap.containsKey(baseId)) continue;
             ProcessConfigDTO.NodeDef nd = new ProcessConfigDTO.NodeDef();
             nd.setId(el.getId());
             nd.setName(el.getName());
@@ -159,18 +177,13 @@ public class ProcessDefinitionController extends BaseController {
             else if (el instanceof EndEvent) nd.setType("endEvent");
             else if (el instanceof UserTask ut) {
                 nd.setType("userTask");
-                // 检测会签节点
-                var loop = ut.getLoopCharacteristics();
-                if (loop instanceof org.flowable.bpmn.model.MultiInstanceLoopCharacteristics) {
-                    var mi = (org.flowable.bpmn.model.MultiInstanceLoopCharacteristics) loop;
-                    if (mi.getInputDataItem() != null) {
-                        // inputDataItem 形如 ${["lisi","wangwu"]}，提取出列表
-                        String expr = mi.getInputDataItem();
-                        String inner = expr.replaceAll("[\\$\\{\\}\\[\\]\"]", ""); // → lisi,wangwu
-                        nd.setAssigneeList(Arrays.asList(inner.split(",")));
-                    } else {
-                        nd.setAssignee(ut.getAssignee());
-                    }
+                List<String> signUsers = signMap.get(el.getId());
+                // 从 documentation 或 BPMN 模型检测会签
+                if (signUsers != null) {
+                    nd.setAssigneeList(signUsers);
+                } else if (ut.getLoopCharacteristics() != null) {
+                    // Multi-instance 节点，但 documentation 可能没存（旧数据），跳过
+                    // assignee 是 ${assignee}，不设为宜
                 } else {
                     nd.setAssignee(ut.getAssignee());
                 }

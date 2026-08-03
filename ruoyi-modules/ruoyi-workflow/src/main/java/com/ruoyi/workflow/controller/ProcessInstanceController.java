@@ -67,6 +67,37 @@ public class ProcessInstanceController extends BaseController {
         body.put("deptLeader", approvers.get("deptLeader"));
         body.put("parentDeptLeader", approvers.get("parentDeptLeader"));
 
+        // 注入会签列表变量（从流程定义 documentation 读取）
+        try {
+            var pd = flowableService.getLatestProcessDefinition(processKey);
+            if (pd != null) {
+                var bpmn = flowableService.getBpmnModel(pd.getId());
+                if (bpmn != null && bpmn.getProcesses() != null && !bpmn.getProcesses().isEmpty()) {
+                    String doc = bpmn.getProcesses().get(0).getDocumentation();
+                    if (doc != null) {
+                        for (String part : doc.split(";")) {
+                            if (part.startsWith("SIGN:")) {
+                                String[] kv = part.substring(5).split("=", 2);
+                                if (kv.length == 2) {
+                                    List<String> users = new ArrayList<>();
+                                    for (String u : kv[1].split(",")) {
+                                        String resolved = u.trim();
+                                        if ("${deptLeader}".equals(resolved)) resolved = approvers.get("deptLeader");
+                                        else if ("${parentDeptLeader}".equals(resolved)) resolved = approvers.get("parentDeptLeader");
+                                        else if ("${applicant}".equals(resolved)) resolved = applicant;
+                                        if (resolved != null && !resolved.isEmpty()) users.add(resolved);
+                                    }
+                                    if (!users.isEmpty()) body.put("assigneeList_" + kv[0], users);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[workflow] 注入会签列表失败: " + e.getMessage());
+        }
+
         ProcessInstance instance = flowableService.startProcess(processKey, body);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("processInstanceId", instance.getId());
@@ -151,11 +182,13 @@ public class ProcessInstanceController extends BaseController {
         start.put("status", "completed");
         list.add(start);
 
-        // 2. 已完成节点
+        // 2. 已完成节点（跳过被取消/删除的任务，如撤回时未审批的节点）
         List<HistoricTaskInstance> tasks = flowableService.listProcessTrack(processInstanceId);
         Set<String> added = new HashSet<>();
         tasks.forEach(t -> {
             if (t.getEndTime() == null) return;
+            // 跳过被取消的任务（撤回/驳回时未审批节点的 endTime 是删除时间，非真正审批完成）
+            if (t.getDeleteReason() != null) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("node", t.getName());
             m.put("assignee", t.getAssignee());
@@ -187,12 +220,42 @@ public class ProcessInstanceController extends BaseController {
             if (added.contains(key)) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("node", t.getName());
-            m.put("assignee", t.getAssignee());
             m.put("startTime", t.getCreateTime());
-            m.put("status", "pending");
+            // 检查主审批人是否已通过（等待加签中，任务未分配）
+            Boolean mainApproved = vars.get("_mainApproved") instanceof Boolean b && b;
+            String mainApprover = (String) vars.get("_mainApprover");
+            if (mainApproved && t.getAssignee() == null && mainApprover != null) {
+                m.put("assignee", mainApprover);
+                m.put("status", "completed");
+                m.put("action", "通过");
+            } else {
+                m.put("assignee", t.getAssignee());
+                m.put("status", "pending");
+            }
             list.add(m);
             added.add(key);
         });
+
+        // 4. 流程已撤回/已结束
+        if (hi != null && hi.getDeleteReason() != null) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            if (hi.getDeleteReason().contains("撤回")) {
+                m.put("node", "已撤回");
+                m.put("action", "撤回");
+            } else if (hi.getDeleteReason().contains("驳回")) {
+                m.put("node", "已驳回");
+                m.put("action", "驳回");
+            } else {
+                m.put("node", "已结束");
+                m.put("action", "结束");
+            }
+            m.put("assignee", applicant);
+            m.put("startTime", hi.getEndTime());
+            m.put("endTime", hi.getEndTime());
+            m.put("status", "completed");
+            m.put("comment", hi.getDeleteReason());
+            list.add(m);
+        }
 
         return R.ok(list);
     }

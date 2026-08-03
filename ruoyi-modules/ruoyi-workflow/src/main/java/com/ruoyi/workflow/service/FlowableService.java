@@ -47,6 +47,23 @@ public class FlowableService {
                 .list();
     }
 
+    /**
+     * 获取指定 key 的最新版流程定义
+     */
+    public ProcessDefinition getLatestProcessDefinition(String processKey) {
+        return repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey(processKey)
+                .latestVersion()
+                .singleResult();
+    }
+
+    /**
+     * 获取流程定义的 BPMN 模型
+     */
+    public org.flowable.bpmn.model.BpmnModel getBpmnModel(String processDefinitionId) {
+        return repositoryService.getBpmnModel(processDefinitionId);
+    }
+
     // ==================== 流程实例 ====================
 
     /**
@@ -167,15 +184,23 @@ public class FlowableService {
         // 取消当前所有活跃任务
         List<Task> activeTasks = taskService.createTaskQuery().processInstanceId(piId).list();
         for (Task t : activeTasks) {
-            // 删除独立加签任务
             if (t.getParentTaskId() != null) {
                 taskService.deleteTask(t.getId(), "驳回到上一步");
             }
         }
+        // 找到 BPMN 任务（非独立加签）作为回退起点
+        String currentDefKey = null;
+        for (Task t : activeTasks) {
+            if (t.getParentTaskId() == null && t.getTaskDefinitionKey() != null) {
+                currentDefKey = t.getTaskDefinitionKey();
+                break;
+            }
+        }
+        if (currentDefKey == null) throw new RuntimeException("未找到可回退的当前节点");
         // 移动流程回到上一个节点
         runtimeService.createChangeActivityStateBuilder()
                 .processInstanceId(piId)
-                .moveActivityIdTo(activeTasks.get(0).getTaskDefinitionKey(), targetActivityId)
+                .moveActivityIdTo(currentDefKey, targetActivityId)
                 .changeState();
     }
 
@@ -280,11 +305,34 @@ public class FlowableService {
     public List<HistoricTaskInstance> listProcessTrack(String processInstanceId) {
         return historyService.createHistoricTaskInstanceQuery()
                 .processInstanceId(processInstanceId)
-                .orderByHistoricTaskInstanceStartTime().asc()
+                .orderByHistoricTaskInstanceEndTime().asc()
                 .list().stream()
                 .filter(t -> {
                     String r = t.getDeleteReason();
                     return r == null || (!r.contains("change activity") && !r.contains("驳回上一步"));
+                })
+                .toList();
+    }
+
+    /**
+     * 删除历史任务（抄送已阅后清理）
+     */
+    public void deleteHistoricTask(String taskId) {
+        try { historyService.deleteHistoricTaskInstance(taskId); } catch (Exception ignored) {}
+    }
+
+    /**
+     * 查询申请人撤回的流程实例
+     */
+    public List<HistoricProcessInstance> listWithdrawnProcesses(String applicant) {
+        return historyService.createHistoricProcessInstanceQuery()
+                .involvedUser(applicant)
+                .deleted()
+                .orderByProcessInstanceEndTime().desc()
+                .list().stream()
+                .filter(hi -> {
+                    String reason = hi.getDeleteReason();
+                    return reason != null && reason.contains("撤回");
                 })
                 .toList();
     }

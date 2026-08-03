@@ -165,29 +165,37 @@
     </el-dialog>
 
     <!-- 审批轨迹对话框 -->
-    <el-dialog title="审批轨迹" :visible.sync="trackOpen" width="600px" append-to-body>
-      <el-timeline>
-        <el-timeline-item
-          v-for="(item, index) in trackList"
-          :key="index"
-          :timestamp="item.endTime ? '完成 ' + parseTime(item.endTime) : '审批中...'"
-          :color="item.status === 'completed' ? '#67C23A' : '#E6A23C'"
-        >
-          <div>
-            <strong>{{ item.assignee }}</strong>
-            <el-tag :type="item.status === 'completed' ? 'success' : 'warning'" size="mini" style="margin-left: 8px;">
-              {{ item.node }}
-            </el-tag>
-            <el-tag v-if="item.action" size="mini" effect="plain"
-              :type="item.action === '驳回' || item.action === '驳回到上一步' ? 'danger' : ''"
-              style="margin-left:4px;">{{ item.action }}</el-tag>
-            <span v-if="item.status === 'pending'" style="color:#E6A23C;margin-left:8px;font-size:12px;">⏳ 审批中</span>
+    <el-dialog title="审批轨迹" :visible.sync="trackOpen" width="650px" append-to-body>
+      <div v-if="stagedList.length > 0">
+        <div v-for="(stage, si) in stagedList" :key="si" style="margin-bottom:12px;">
+          <div style="font-weight:bold;color:#409EFF;margin-bottom:6px;font-size:13px;">
+            【{{ stage.label }}】
           </div>
-          <div v-if="item.comment" style="margin-top: 2px; color: #666; font-size: 13px;">
-            审批意见：{{ item.comment }}
-          </div>
-        </el-timeline-item>
-      </el-timeline>
+          <el-timeline>
+            <el-timeline-item
+              v-for="(item, ii) in stage.items"
+              :key="ii"
+              :timestamp="item.endTime ? '完成 ' + parseTime(item.endTime) : '审批中...'"
+              :color="item.status === 'completed' ? '#67C23A' : '#E6A23C'"
+            >
+              <div>
+                <strong>{{ item.assignee }}</strong>
+                <el-tag :type="item.status === 'completed' ? 'success' : 'warning'" size="mini" style="margin-left: 8px;">
+                  {{ item.node }}
+                </el-tag>
+                <el-tag v-if="item.action" size="mini" effect="plain"
+                  :type="item.action === '驳回' || item.action === '驳回到上一步' ? 'danger' : ''"
+                  style="margin-left:4px;">{{ item.action }}</el-tag>
+                <el-tag v-if="isMainApprover(item, stage)" size="mini" effect="dark" style="margin-left:4px;">主审</el-tag>
+                <span v-if="item.status === 'pending'" style="color:#E6A23C;margin-left:8px;font-size:12px;">⏳ 审批中</span>
+              </div>
+              <div v-if="item.comment" style="margin-top: 2px; color: #666; font-size: 13px;">
+                审批意见：{{ item.comment }}
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+        </div>
+      </div>
       <div v-if="trackList.length === 0" style="text-align:center;color:#999;padding:40px;">
         暂无审批记录
       </div>
@@ -242,6 +250,23 @@ export default {
     commentPlaceholder() {
       const map = { approve: '审批意见（可选）', reject: '驳回原因', rollback: '退回原因' }
       return map[this.approveForm.action] || ''
+    },
+    stagedList() {
+      // 将轨迹按阶段分组（去掉(加签)后缀归为同一阶段）
+      const groups = []
+      let currentLabel = null
+      let currentItems = []
+      this.trackList.forEach(item => {
+        const baseNode = (item.node || '').replace('(加签)', '').trim()
+        if (baseNode !== currentLabel) {
+          if (currentItems.length > 0) groups.push({ label: currentLabel, items: currentItems })
+          currentLabel = baseNode
+          currentItems = []
+        }
+        currentItems.push(item)
+      })
+      if (currentItems.length > 0) groups.push({ label: currentLabel, items: currentItems })
+      return groups
     }
   },
   methods: {
@@ -289,13 +314,11 @@ export default {
       this.loading = true
       listRunningProcesses().then(res => {
         const all = res.data || []
-        const user = this.$store.state.user.name
-        // 过滤当前用户发起的流程（通过变量中的 applicant 判断）
+        const target = this.queryParams.assignee || this.$store.state.user.name
         this.mineList = all.filter(p => {
           const vars = p.variables || {}
-          return vars.applicant === user
+          return vars.applicant === target
         }).map(p => {
-          // 从变量中解析流程名
           const vars = p.variables || {}
           const key = vars.processKey || p.processDefinitionKey || ''
           return { ...p, processName: key, variables: vars }
@@ -379,6 +402,11 @@ export default {
     },
     isCcTask(name) {
       return name && name.startsWith('[抄送]')
+    },
+    isMainApprover(item, stage) {
+      // 有加签时，所有非加签的都是主审（会签+加签场景）
+      const hasSign = stage.items.some(i => (i.node || '').includes('(加签)'))
+      return hasSign && !(item.node || '').includes('(加签)')
     },
 
     formatDuration(ms) {

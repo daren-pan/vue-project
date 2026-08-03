@@ -80,7 +80,10 @@ public class TaskController extends BaseController {
             m.put("processName", pn);
             m.put("processInstanceId", resolvedPiId);
             m.put("createTime", t.getCreateTime());
-            Map<String, Object> vars = new HashMap<>(flowableService.getTaskVariables(t.getId()));
+            // 从流程变量（含历史）读取业务数据
+            Map<String, Object> vars = resolvedPiId != null
+                ? new HashMap<>(flowableService.getVariables(resolvedPiId))
+                : new HashMap<>(flowableService.getTaskVariables(t.getId()));
             // 补 processKey 供前端表单匹配
             if (!vars.containsKey("processKey") && resolvedPiId != null) {
                 try {
@@ -141,8 +144,10 @@ public class TaskController extends BaseController {
             Map<String, Object> vars = runtimeService.getVariables(piId);
             int signCount = vars.get("_signCount") instanceof Integer i ? i : 1;
             if (signCount > 1) {
-                // 还有加签人未批，暂存审批结果
-                taskService.setVariable(taskId, "_mainApproved", true);
+                // 还有加签人未批，暂存审批结果并取消认领
+                runtimeService.setVariable(piId, "_mainApproved", true);
+                runtimeService.setVariable(piId, "_mainApprover", task.getAssignee());
+                taskService.setAssignee(taskId, null);
             } else {
                 flowableService.completeTask(taskId, Map.of("approved", true));
             }
@@ -170,11 +175,8 @@ public class TaskController extends BaseController {
                 ccTask.setName("[抄送] " + getProcessNameByInstance(piId));
                 ccTask.setAssignee(user);
                 taskService.saveTask(ccTask);
-                // 存流程信息到任务变量，供前端展示
-                Map<String, Object> tv = new HashMap<>();
-                tv.put("_ccProcessInstanceId", piId);
-                tv.putAll(vars);
-                taskService.setVariables(ccTask.getId(), tv);
+                // 只存流程实例ID，业务数据从 act_hi_varinst 查
+                taskService.setVariable(ccTask.getId(), "_ccProcessInstanceId", piId);
             }
         }
 
@@ -229,7 +231,14 @@ public class TaskController extends BaseController {
         try {
             flowableService.rollbackToPrevious(taskId);
         } catch (RuntimeException e) {
-            return R.fail(e.getMessage());
+            // 无上一节点 → 降级为直接驳回
+            flowableService.deleteProcessInstance(piId, "驳回: " + reason);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("taskId", taskId);
+            result.put("action", "驳回");
+            result.put("reason", reason);
+            result.put("tip", "已是首个审批节点，已直接驳回");
+            return R.ok(result);
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -279,6 +288,8 @@ public class TaskController extends BaseController {
         Task task = flowableService.getTask(taskId);
         if (task == null) return R.fail("任务「" + taskId + "」不存在或已被处理");
         taskService.deleteTask(taskId, "已阅");
+        // 清理历史记录
+        flowableService.deleteHistoricTask(taskId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("taskId", taskId);
@@ -295,7 +306,7 @@ public class TaskController extends BaseController {
     @GetMapping("/history")
     public R<List<Map<String, Object>>> history(@RequestParam String assignee) {
         List<HistoricTaskInstance> tasks = flowableService.listHistoryTasks(assignee);
-        List<Map<String, Object>> list = tasks.stream().map(t -> {
+        List<Map<String, Object>> list = new ArrayList<>(tasks.stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("taskId", t.getId());
             m.put("taskName", t.getName());
@@ -307,7 +318,31 @@ public class TaskController extends BaseController {
             m.put("duration", t.getDurationInMillis());
             m.put("status", t.getDeleteReason() != null ? "已退回" : "已通过");
             return m;
-        }).toList();
+        }).toList());
+
+        // 查申请人撤回的流程（无任务记录，通过历史实例查）
+        flowableService.listWithdrawnProcesses(assignee).forEach(hi -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("taskId", hi.getId());
+            m.put("taskName", "发起申请");
+            m.put("processName", getProcessNameByInstance(hi.getId()));
+            m.put("processInstanceId", hi.getId());
+            m.put("startTime", hi.getStartTime());
+            m.put("endTime", hi.getEndTime());
+            m.put("duration", hi.getDurationInMillis());
+            m.put("status", "已撤回");
+            list.add(m);
+        });
+
+        // 按结束时间倒序
+        list.sort((a, b) -> {
+            Object ae = a.get("endTime");
+            Object be = b.get("endTime");
+            if (ae == null && be == null) return 0;
+            if (ae == null) return 1;
+            if (be == null) return -1;
+            return ((java.util.Date) be).compareTo((java.util.Date) ae);
+        });
         return R.ok(list);
     }
 
