@@ -172,6 +172,18 @@ export function addSign(taskId, assignee) {
 }
 
 /**
+ * 强制删除流程实例 —— 清理异常/无法通过的问题流程
+ * @param {string} processInstanceId 流程实例 ID
+ */
+export function deleteProcessInstance(processInstanceId) {
+  return request({
+    url: '/workflow/task/deleteInstance',
+    method: 'post',
+    params: { processInstanceId }
+  })
+}
+
+/**
  * 关闭抄送任务（已阅）
  * @param {string} taskId 任务 ID
  */

@@ -1,0 +1,248 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven-3.9'
+        nodejs 'node-18'
+    }
+
+    environment {
+        // ACR 镜像仓库
+        ACR_REGISTRY = 'crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com'
+        ACR_NAMESPACE = 'ruoyi-personal'
+        REG = "${ACR_REGISTRY}/${ACR_NAMESPACE}"
+        ACR_CREDENTIALS = credentials('acr-credentials')
+
+        // ECS 服务器（仅用于触发部署，不传源码）
+        ECS_HOST     = '${ECS_HOST}'
+        ECS_USER     = 'root'
+        ECS_PORT     = '22'
+        ECS_DEPLOY_DIR = '/opt/ruoyi'
+    }
+
+    stages {
+
+        // ============================================================
+        // 步骤 1：拉代码 + 增量检测
+        // ============================================================
+        stage('■ 1/4 拉代码 & 检测变更') {
+            steps {
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                echo '  📥 从 Codeup 拉取代码...'
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                git url: 'https://codeup.aliyun.com/6a31f41b5a46a9699cb73592/daren-pan/RuoYi-Cloud.git',
+                    branch: 'springboot3',
+                    credentialsId: 'codeup-creds'
+
+                script {
+                    def GIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.UNIQUE_TAG = "ecs-b${BUILD_NUMBER}-${GIT_HASH}"
+                    echo "🏷️  镜像标签: ${env.UNIQUE_TAG}"
+
+                    echo '🔍 检测哪些模块有变更...'
+                    def DIFF = 'ALL'
+                    try {
+                        def oldCommit = sh(script: 'git rev-parse HEAD~1', returnStdout: true).trim()
+                        DIFF = sh(script: "git diff --name-only ${oldCommit} HEAD", returnStdout: true).trim()
+                    } catch (Exception e) { }
+                    if (DIFF == '') { DIFF = 'ALL' }
+
+                    env.CHANGED_UI   = (DIFF == 'ALL' || DIFF.contains('ruoyi-ui/')) ? 'true' : 'false'
+                    def CHANGED_COM  = (DIFF == 'ALL' || DIFF.contains('ruoyi-common/') || DIFF.contains('ruoyi-api/'))
+                    env.CHANGED_AUTH     = (CHANGED_COM || DIFF.contains('ruoyi-auth/')) ? 'true' : 'false'
+                    env.CHANGED_GATE     = (CHANGED_COM || DIFF.contains('ruoyi-gateway/')) ? 'true' : 'false'
+                    env.CHANGED_SYS      = (CHANGED_COM || DIFF.contains('ruoyi-modules/ruoyi-system/')) ? 'true' : 'false'
+                    env.CHANGED_GEN      = (CHANGED_COM || DIFF.contains('ruoyi-modules/ruoyi-gen/')) ? 'true' : 'false'
+                    env.CHANGED_JOB      = (CHANGED_COM || DIFF.contains('ruoyi-modules/ruoyi-job/')) ? 'true' : 'false'
+                    env.CHANGED_FILE     = (CHANGED_COM || DIFF.contains('ruoyi-modules/ruoyi-file/')) ? 'true' : 'false'
+                    env.CHANGED_WORKFLOW = (CHANGED_COM || DIFF.contains('ruoyi-modules/ruoyi-workflow/')) ? 'true' : 'false'
+                    env.CHANGED_MONITOR  = (CHANGED_COM || DIFF.contains('ruoyi-visual/ruoyi-monitor/')) ? 'true' : 'false'
+
+                    echo "  UI=${env.CHANGED_UI}  Auth=${env.CHANGED_AUTH}  Gateway=${env.CHANGED_GATE}  System=${env.CHANGED_SYS}"
+                    echo "  Gen=${env.CHANGED_GEN}  Job=${env.CHANGED_JOB}  File=${env.CHANGED_FILE}  Workflow=${env.CHANGED_WORKFLOW}"
+                }
+            }
+        }
+
+        // ============================================================
+        // 步骤 2：编译（Maven + npm 并行，只编译变更模块）
+        // ============================================================
+        stage('■ 2/4 编译（增量）') {
+            parallel {
+                stage('Maven 后端') {
+                    when { expression {
+                        env.CHANGED_AUTH == 'true' || env.CHANGED_GATE == 'true' ||
+                        env.CHANGED_SYS == 'true' || env.CHANGED_GEN == 'true' ||
+                        env.CHANGED_JOB == 'true' || env.CHANGED_FILE == 'true' ||
+                        env.CHANGED_WORKFLOW == 'true' || env.CHANGED_MONITOR == 'true'
+                    }}
+                    steps {
+                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                        echo '  🔧 Maven 编译变更的后端模块...'
+                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                        script {
+                            def modules = []
+                            if (env.CHANGED_AUTH == 'true')     modules.add('ruoyi-auth')
+                            if (env.CHANGED_GATE == 'true')     modules.add('ruoyi-gateway')
+                            if (env.CHANGED_SYS  == 'true')     modules.add('ruoyi-modules/ruoyi-system')
+                            if (env.CHANGED_GEN  == 'true')     modules.add('ruoyi-modules/ruoyi-gen')
+                            if (env.CHANGED_JOB  == 'true')     modules.add('ruoyi-modules/ruoyi-job')
+                            if (env.CHANGED_FILE == 'true')     modules.add('ruoyi-modules/ruoyi-file')
+                            if (env.CHANGED_WORKFLOW == 'true') modules.add('ruoyi-modules/ruoyi-workflow')
+                            if (env.CHANGED_MONITOR == 'true')  modules.add('ruoyi-visual/ruoyi-monitor')
+                            echo "  编译模块: ${modules.join(', ')}"
+                            sh "mvn clean package -DskipTests -pl ${modules.join(',')} -am"
+                        }
+                        echo '✅ Maven 编译完成'
+                    }
+                }
+                stage('npm 前端') {
+                    when { expression { env.CHANGED_UI == 'true' } }
+                    steps {
+                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                        echo '  🎨 npm 构建前端...'
+                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                        dir('ruoyi-ui') {
+                            sh 'npm install --registry=https://registry.npmmirror.com'
+                            sh 'npm run build:prod'
+                        }
+                        echo '✅ npm 构建完成'
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // 步骤 3：Docker 构建 & 推送 ACR
+        // ============================================================
+        stage('■ 3/4 Docker 构建 & 推送 ACR') {
+            steps {
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                echo '  🔐 登录 ACR 镜像仓库...'
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                sh 'echo "$ACR_CREDENTIALS_PSW" | docker login --username "$ACR_CREDENTIALS_USR" --password-stdin $ACR_REGISTRY'
+
+                script {
+                    // 通用构建推送函数
+                    def buildAndPush = { name, jarDir, ctx ->
+                        echo ''
+                        echo "━━━ 🐳 ruoyi-${name} ━━━"
+                        sh "cp ${jarDir}/target/*.jar docker/ruoyi/${ctx}/jar/"
+                        sh "docker build -t ${REG}/ruoyi-${name}:${env.UNIQUE_TAG} -t ${REG}/ruoyi-${name}:latest -f docker/ruoyi/${ctx}/dockerfile docker/ruoyi/${ctx}"
+                        sh "docker push ${REG}/ruoyi-${name}:${env.UNIQUE_TAG}"
+                        sh "docker push ${REG}/ruoyi-${name}:latest"
+                        echo "  ✅ ruoyi-${name}:${env.UNIQUE_TAG}"
+                    }
+
+                    // 前端镜像（特殊处理）
+                    if (env.CHANGED_UI == 'true') {
+                        echo ''
+                        echo '━━━ 🐳 ruoyi-nginx ━━━'
+                        sh 'mkdir -p docker/nginx/html && rm -rf docker/nginx/html/dist && cp -r ruoyi-ui/dist docker/nginx/html/dist'
+                        sh "docker build --no-cache -t ${REG}/ruoyi-nginx:${env.UNIQUE_TAG} -t ${REG}/ruoyi-nginx:latest -f docker/nginx/dockerfile docker/nginx"
+                        sh "docker push ${REG}/ruoyi-nginx:${env.UNIQUE_TAG}"
+                        sh "docker push ${REG}/ruoyi-nginx:latest"
+                        echo "  ✅ ruoyi-nginx:${env.UNIQUE_TAG}"
+                    }
+
+                    // 后端镜像（增量）
+                    if (env.CHANGED_AUTH == 'true')     buildAndPush('auth',     'ruoyi-auth',                   'auth')
+                    if (env.CHANGED_GATE == 'true')     buildAndPush('gateway',  'ruoyi-gateway',                'gateway')
+                    if (env.CHANGED_SYS == 'true')      buildAndPush('system',   'ruoyi-modules/ruoyi-system',   'modules/system')
+                    if (env.CHANGED_GEN == 'true')      buildAndPush('gen',      'ruoyi-modules/ruoyi-gen',      'modules/gen')
+                    if (env.CHANGED_JOB == 'true')      buildAndPush('job',      'ruoyi-modules/ruoyi-job',      'modules/job')
+                    if (env.CHANGED_FILE == 'true')     buildAndPush('file',     'ruoyi-modules/ruoyi-file',     'modules/file')
+                    if (env.CHANGED_WORKFLOW == 'true') buildAndPush('workflow', 'ruoyi-modules/ruoyi-workflow', 'modules/workflow')
+                    if (env.CHANGED_MONITOR == 'true')  buildAndPush('monitor',  'ruoyi-visual/ruoyi-monitor',   'visual/monitor')
+                }
+            }
+        }
+
+        // ============================================================
+        // 步骤 4：触发 ECS 部署（Jenkins 不操作宿主机 Docker）
+        // ============================================================
+        stage('■ 4/4 触发 ECS 部署') {
+            steps {
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                echo '  🚀 SSH 触发 ECS 自行拉取镜像并重启...'
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'ecs-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )
+                ]) {
+                    script {
+                        def remote = { cmd ->
+                            sh "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${ECS_PORT} ${ECS_USER}@${ECS_HOST} '${cmd}'"
+                        }
+                        def CD = "cd ${ECS_DEPLOY_DIR}"
+
+                        echo '>>> git pull...'
+                        remote("${CD} && git pull")
+
+                        // 只拉取变更模块的镜像 + re-tag 为 docker-compose 本地名
+                        def pullAndTag = { changed, acrName, localName ->
+                            if (changed == 'true') {
+                                echo "  📥 ${acrName}"
+                                remote("docker pull ${REG}/${acrName}:${env.UNIQUE_TAG}")
+                                remote("docker tag ${REG}/${acrName}:${env.UNIQUE_TAG} ${localName}:latest")
+                            }
+                        }
+
+                        pullAndTag(env.CHANGED_AUTH,     'ruoyi-auth',             'docker-ruoyi-auth')
+                        pullAndTag(env.CHANGED_GATE,     'ruoyi-gateway',          'docker-ruoyi-gateway')
+                        pullAndTag(env.CHANGED_SYS,      'ruoyi-system',           'docker-ruoyi-modules-system')
+                        pullAndTag(env.CHANGED_GEN,      'ruoyi-gen',              'docker-ruoyi-modules-gen')
+                        pullAndTag(env.CHANGED_JOB,      'ruoyi-job',              'docker-ruoyi-modules-job')
+                        pullAndTag(env.CHANGED_FILE,     'ruoyi-file',             'docker-ruoyi-modules-file')
+                        pullAndTag(env.CHANGED_WORKFLOW, 'ruoyi-workflow',         'docker-ruoyi-modules-workflow')
+                        pullAndTag(env.CHANGED_MONITOR,  'ruoyi-monitor',          'docker-ruoyi-visual-monitor')
+                        pullAndTag(env.CHANGED_UI,       'ruoyi-nginx',            'ruoyi-nginx')
+
+                        // 收集需重启的服务
+                        def svc = []
+                        if (env.CHANGED_AUTH == 'true')     svc.add('ruoyi-auth')
+                        if (env.CHANGED_GATE == 'true')     svc.add('ruoyi-gateway')
+                        if (env.CHANGED_SYS == 'true')      svc.add('ruoyi-modules-system')
+                        if (env.CHANGED_GEN == 'true')      svc.add('ruoyi-modules-gen')
+                        if (env.CHANGED_JOB == 'true')      svc.add('ruoyi-modules-job')
+                        if (env.CHANGED_FILE == 'true')     svc.add('ruoyi-modules-file')
+                        if (env.CHANGED_WORKFLOW == 'true') svc.add('ruoyi-modules-workflow')
+                        if (env.CHANGED_MONITOR == 'true')  svc.add('ruoyi-visual-monitor')
+                        if (env.CHANGED_UI == 'true')       svc.add('ruoyi-nginx')
+
+                        if (svc.size() > 0) {
+                            echo "  🚀 重启: ${svc.join(' ')}"
+                            remote("${CD} && docker compose up -d --force-recreate ${svc.join(' ')} 2>/dev/null || docker-compose up -d --force-recreate ${svc.join(' ')}")
+                            sleep(time: 15, unit: 'SECONDS')
+                        } else {
+                            echo '  ⏭️ 无变更模块，跳过重启'
+                        }
+
+                        echo '>>> 服务状态:'
+                        remote("${CD} && docker compose ps 2>/dev/null || docker-compose ps")
+                    }
+                }
+                echo '✅ 部署触发完成'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo ''
+            echo '╔══════════════════════════════════════════╗'
+            echo "║  ✅ ECS 部署 #${BUILD_NUMBER} 成功！              ║"
+            echo "║  标签: ${env.UNIQUE_TAG}         ║"
+            echo '╚══════════════════════════════════════════╝'
+        }
+        failure {
+            echo ''
+            echo '╔══════════════════════════════════════════╗'
+            echo "║  ❌ ECS 部署 #${BUILD_NUMBER} 失败！              ║"
+            echo '╚══════════════════════════════════════════╝'
+        }
+    }
+}

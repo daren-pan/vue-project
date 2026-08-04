@@ -2,7 +2,7 @@
 
 # 使用说明，用来提示输入参数
 usage() {
-	echo "Usage: sh 执行脚本.sh [port|base|modules|stop|rm]"
+	echo "Usage: sh 执行脚本.sh [port|base|modules|middleware|elk|stop|rm]"
 	exit 1
 }
 
@@ -20,7 +20,13 @@ port(){
 	firewall-cmd --add-port=9201/tcp --permanent
 	firewall-cmd --add-port=9202/tcp --permanent
 	firewall-cmd --add-port=9203/tcp --permanent
+	firewall-cmd --add-port=9208/tcp --permanent
 	firewall-cmd --add-port=9300/tcp --permanent
+	firewall-cmd --add-port=8718/tcp --permanent
+	firewall-cmd --add-port=5672/tcp --permanent
+	firewall-cmd --add-port=15672/tcp --permanent
+	firewall-cmd --add-port=8081/tcp --permanent
+	firewall-cmd --add-port=50000/tcp --permanent
 	service firewalld restart
 }
 
@@ -29,9 +35,14 @@ base(){
 	docker-compose up -d ruoyi-mysql ruoyi-redis ruoyi-nacos
 }
 
-# 启动程序模块（必须）
+# 启动程序模块（必须，含工作流）
 modules(){
-	docker-compose up -d ruoyi-nginx ruoyi-gateway ruoyi-auth ruoyi-modules-system
+	docker-compose up -d ruoyi-nginx ruoyi-gateway ruoyi-auth ruoyi-modules-system ruoyi-modules-workflow
+}
+
+# 启动中间件（Docker-in-Docker / RabbitMQ / Sentinel / Jenkins）
+middleware(){
+	docker-compose up -d dind ruoyi-rabbitmq ruoyi-sentinel jenkins
 }
 
 # 启动 ELK 日志系统（Docker）
@@ -61,6 +72,9 @@ case "$1" in
 ;;
 "modules")
 	modules
+;;
+"middleware")
+	middleware
 ;;
 "elk")
 	elk

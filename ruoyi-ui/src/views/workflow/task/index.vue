@@ -53,12 +53,13 @@
               {{ parseTime(scope.row.createTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" align="center" width="240">
+          <el-table-column label="操作" align="center" width="300">
             <template slot-scope="scope">
               <el-button v-if="!isCcTask(scope.row.taskName)" size="mini" type="primary" icon="el-icon-check" @click="handleApprove(scope.row)">审批</el-button>
               <el-button v-else size="mini" type="success" icon="el-icon-check" @click="handleDismiss(scope.row)">已阅</el-button>
               <el-button size="mini" type="text" icon="el-icon-view" @click="handleViewDetail(scope.row)">详情</el-button>
               <el-button size="mini" type="text" icon="el-icon-tickets" @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
+              <el-button size="mini" type="text" icon="el-icon-delete" style="color:#F56C6C;" @click="handleDeleteInstance(scope.row)">删除实例</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -117,12 +118,14 @@
               {{ parseTime(scope.row.startTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" align="center" width="160">
+          <el-table-column label="操作" align="center" width="240">
             <template slot-scope="scope">
               <el-button size="mini" type="warning" icon="el-icon-back"
                 @click="handleWithdraw(scope.row)">撤回</el-button>
               <el-button size="mini" type="text" icon="el-icon-tickets"
                 @click="handleTrack(scope.row.processInstanceId)">轨迹</el-button>
+              <el-button size="mini" type="text" icon="el-icon-delete" style="color:#F56C6C;"
+                @click="handleDeleteInstance(scope.row)">删除实例</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -211,7 +214,7 @@
 </template>
 
 <script>
-import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, rollbackTask, addSign, dismissTask, getProcessTrack, listRunningProcesses, withdrawProcess } from "@/api/workflow/flowable"
+import { listTodoTasks, listHistoryTasks, approveTask, rejectTask, rollbackTask, addSign, dismissTask, getProcessTrack, listRunningProcesses, withdrawProcess, deleteProcessInstance } from "@/api/workflow/flowable"
 import formRegistry from "@/views/workflow/apply/formRegistry"
 
 export default {
@@ -252,7 +255,7 @@ export default {
       return map[this.approveForm.action] || ''
     },
     stagedList() {
-      // 将轨迹按阶段分组（去掉(加签)后缀归为同一阶段）
+      // 将轨迹按阶段分组（去掉(加签)后缀归为同一阶段），按最早完成时间排序
       const groups = []
       let currentLabel = null
       let currentItems = []
@@ -266,6 +269,15 @@ export default {
         currentItems.push(item)
       })
       if (currentItems.length > 0) groups.push({ label: currentLabel, items: currentItems })
+      // 按每组最早完成时间排序（未完成的排最后）
+      groups.sort((a, b) => {
+        const aTime = a.items.reduce((min, it) => it.endTime && (!min || it.endTime < min) ? it.endTime : min, null)
+        const bTime = b.items.reduce((min, it) => it.endTime && (!min || it.endTime < min) ? it.endTime : min, null)
+        if (!aTime && !bTime) return 0
+        if (!aTime) return 1
+        if (!bTime) return -1
+        return new Date(aTime) - new Date(bTime)
+      })
       return groups
     }
   },
@@ -343,6 +355,24 @@ export default {
       dismissTask(row.taskId).then(() => {
         this.$message.success('已阅')
         this.loadTodo()
+      }).catch(() => {})
+    },
+    handleDeleteInstance(row) {
+      const piId = row.processInstanceId
+      if (!piId) {
+        this.$message.warning('该任务无关联流程实例')
+        return
+      }
+      this.$confirm('确认强制删除该流程实例？此操作不可恢复！', '警告', {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        deleteProcessInstance(piId).then(res => {
+          this.$message.success('流程实例已删除')
+          if (this.activeTab === 'mine') this.loadMine()
+          else this.loadTodo()
+        }).catch(() => {})
       }).catch(() => {})
     },
     handleViewDetail(row) {

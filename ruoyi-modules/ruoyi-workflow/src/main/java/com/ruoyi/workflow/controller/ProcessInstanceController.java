@@ -185,13 +185,16 @@ public class ProcessInstanceController extends BaseController {
         // 2. 已完成节点（跳过被取消/删除的任务，如撤回时未审批的节点）
         List<HistoricTaskInstance> tasks = flowableService.listProcessTrack(processInstanceId);
         Set<String> added = new HashSet<>();
+        String mainApprover = (String) vars.get("_mainApprover");
         tasks.forEach(t -> {
             if (t.getEndTime() == null) return;
             // 跳过被取消的任务（撤回/驳回时未审批节点的 endTime 是删除时间，非真正审批完成）
             if (t.getDeleteReason() != null) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("node", t.getName());
-            m.put("assignee", t.getAssignee());
+            // 若 assignee 为空（加签场景 setAssignee(null) 后完成），从变量还原审批人
+            String assignee = t.getAssignee() != null ? t.getAssignee() : mainApprover;
+            m.put("assignee", assignee);
             m.put("startTime", t.getStartTime());
             m.put("endTime", t.getEndTime());
             m.put("status", "completed");
@@ -211,27 +214,21 @@ public class ProcessInstanceController extends BaseController {
                 }
             } catch (Exception ignored) {}
             list.add(m);
-            added.add(t.getName() + t.getAssignee());
+            added.add(t.getName() + (assignee != null ? assignee : ""));
         });
 
         // 3. 当前待审批节点（排除已完成中出现过的）
         flowableService.listTasksByInstance(processInstanceId).forEach(t -> {
-            String key = t.getName() + t.getAssignee();
+            // 加签等待中的主任务：assignee 被置为 null，用 _mainApprover 还原
+            String curAssignee = t.getAssignee();
+            if (curAssignee == null && mainApprover != null) curAssignee = mainApprover;
+            String key = t.getName() + (curAssignee != null ? curAssignee : "");
             if (added.contains(key)) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("node", t.getName());
             m.put("startTime", t.getCreateTime());
-            // 检查主审批人是否已通过（等待加签中，任务未分配）
-            Boolean mainApproved = vars.get("_mainApproved") instanceof Boolean b && b;
-            String mainApprover = (String) vars.get("_mainApprover");
-            if (mainApproved && t.getAssignee() == null && mainApprover != null) {
-                m.put("assignee", mainApprover);
-                m.put("status", "completed");
-                m.put("action", "通过");
-            } else {
-                m.put("assignee", t.getAssignee());
-                m.put("status", "pending");
-            }
+            m.put("assignee", curAssignee);
+            m.put("status", "pending");
             list.add(m);
             added.add(key);
         });

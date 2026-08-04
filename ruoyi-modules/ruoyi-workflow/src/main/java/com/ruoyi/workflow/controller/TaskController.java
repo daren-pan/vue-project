@@ -142,9 +142,11 @@ public class TaskController extends BaseController {
             // 主任务：有并行加签时暂不完成，等加签人全部通过
             flowableService.addComment(taskId, piId, comment);
             Map<String, Object> vars = runtimeService.getVariables(piId);
+            // 只有加签主人（任务ID匹配_signOwner）才走等待逻辑
+            String signOwner = (String) vars.get("_signOwner");
+            boolean isSignOwner = taskId.equals(signOwner);
             int signCount = vars.get("_signCount") instanceof Integer i ? i : 1;
-            if (signCount > 1) {
-                // 还有加签人未批，暂存审批结果并取消认领
+            if (isSignOwner && signCount > 1) {
                 runtimeService.setVariable(piId, "_mainApproved", true);
                 runtimeService.setVariable(piId, "_mainApprover", task.getAssignee());
                 taskService.setAssignee(taskId, null);
@@ -267,10 +269,11 @@ public class TaskController extends BaseController {
         ((TaskEntity) signTask).setProcessInstanceId(task.getProcessInstanceId());
         taskService.saveTask(signTask);
 
-        // 计数
+        // 计数 + 标记主人
         Map<String, Object> vars = flowableService.getVariables(task.getProcessInstanceId());
         int count = vars.get("_signCount") instanceof Integer i ? i : 1;
         vars.put("_signCount", count + 1);
+        vars.put("_signOwner", taskId);
         runtimeService.setVariables(task.getProcessInstanceId(), vars);
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -294,6 +297,22 @@ public class TaskController extends BaseController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("taskId", taskId);
         result.put("action", "已阅");
+        return R.ok(result);
+    }
+
+    /**
+     * 强制删除流程实例 —— 清理异常/无法通过的问题流程
+     *
+     * @param processInstanceId 流程实例 ID
+     * @return { processInstanceId, action }
+     */
+    @PostMapping("/deleteInstance")
+    public R<Map<String, Object>> deleteInstance(@RequestParam String processInstanceId) {
+        flowableService.deleteProcessInstance(processInstanceId, "管理员强制清理");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("processInstanceId", processInstanceId);
+        result.put("action", "强制删除");
         return R.ok(result);
     }
 

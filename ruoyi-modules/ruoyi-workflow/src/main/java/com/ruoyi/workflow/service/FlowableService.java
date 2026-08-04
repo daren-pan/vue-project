@@ -133,12 +133,29 @@ public class FlowableService {
 
     /**
      * 删除流程实例（驳回/撤回/作废）
+     * 先清理独立任务（加签、抄送等无 execution 的任务），避免 NPE
      *
      * @param processInstanceId 流程实例 ID
      * @param reason            删除原因
      */
     public void deleteProcessInstance(String processInstanceId, String reason) {
-        runtimeService.deleteProcessInstance(processInstanceId, reason);
+        // 1. 先清理关联的独立任务（加签、抄送等），这些任务无 execution 会触发 NPE
+        List<Task> orphanTasks = taskService.createTaskQuery()
+            .processInstanceId(processInstanceId).list();
+        for (Task t : orphanTasks) {
+            try { taskService.deleteTask(t.getId(), reason); } catch (Exception ignored) {}
+        }
+        // 2. 再删除流程实例
+        try {
+            runtimeService.deleteProcessInstance(processInstanceId, reason);
+        } catch (Exception e) {
+            // 如果运行时已不存在，尝试清理历史
+            try {
+                historyService.deleteHistoricProcessInstance(processInstanceId);
+            } catch (Exception ignored) {}
+            // 重新抛出如果不是 NPE（NPE 说明上面已处理干净，流程实际已删）
+            if (!(e instanceof NullPointerException)) throw e;
+        }
     }
 
     /**
