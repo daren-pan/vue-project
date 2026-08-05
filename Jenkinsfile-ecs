@@ -13,11 +13,12 @@ pipeline {
         REG = "${ACR_REGISTRY}/${ACR_NAMESPACE}"
         ACR_CREDENTIALS = credentials('acr-credentials')
 
-        // ECS 服务器（仅用于触发部署，不传源码）
-        ECS_HOST     = '${ECS_HOST}'
+        // ECS 宿主机（同机部署，Docker 网关 IP）
+        ECS_HOST     = '172.17.0.1'
         ECS_USER     = 'root'
         ECS_PORT     = '22'
-        ECS_DEPLOY_DIR = '/opt/ruoyi'
+        ECS_REPO_DIR  = '/root/RuoYi-Cloud'
+        ECS_DOCKER_DIR = '/root/RuoYi-Cloud/docker'
     }
 
     stages {
@@ -170,17 +171,21 @@ pipeline {
                 withCredentials([
                     sshUserPrivateKey(
                         credentialsId: 'ecs-ssh-key',
-                        keyFileVariable: 'SSH_KEY'
+                        keyFileVariable: 'SSH_KEY',
+                        passphraseVariable: '',
+                        usernameVariable: ''
                     )
                 ]) {
                     script {
+                        // 配合 ssh 用的安全选项文件
                         def remote = { cmd ->
-                            sh "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${ECS_PORT} ${ECS_USER}@${ECS_HOST} '${cmd}'"
+                            sh "ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ${SSH_KEY} -p ${ECS_PORT} ${ECS_USER}@${ECS_HOST} '${cmd}'"
                         }
-                        def CD = "cd ${ECS_DEPLOY_DIR}"
+                        def CD = "cd ${ECS_DOCKER_DIR}"
+                        def REPO = "cd ${ECS_REPO_DIR}"
 
                         echo '>>> git pull...'
-                        remote("${CD} && git pull")
+                        remote("${REPO} && git pull")
 
                         // 只拉取变更模块的镜像 + re-tag 为 docker-compose 本地名
                         def pullAndTag = { changed, acrName, localName ->
