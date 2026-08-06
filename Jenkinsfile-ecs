@@ -219,17 +219,17 @@ pipeline {
                             echo "  🚀 重启: ${svc.join(' ')}"
                             // 停容器 → 删容器+旧镜像 → rebuild → 启动（彻底解决缓存问题）
                             svc.each { s ->
-                                remote("cd ${ECS_DOCKER_DIR} && docker compose stop ${s} 2>/dev/null; docker compose rm -f ${s} 2>/dev/null; docker rmi docker-${s}:3.6.7 2>/dev/null; docker-compose stop ${s} 2>/dev/null; docker-compose rm -f ${s} 2>/dev/null; true")
+                                remote("cd ${ECS_DOCKER_DIR} && docker compose stop ${s}; docker compose rm -f ${s}; docker rmi docker-${s}:3.6.7 2>/dev/null; true")
                             }
-                            remote("cd ${ECS_DOCKER_DIR} && docker compose build --no-cache ${svc.join(' ')} 2>/dev/null || docker-compose build --no-cache ${svc.join(' ')}")
-                            remote("cd ${ECS_DOCKER_DIR} && docker compose up -d ${svc.join(' ')} 2>/dev/null || docker-compose up -d ${svc.join(' ')}")
+                            remote("cd ${ECS_DOCKER_DIR} && docker compose build --no-cache ${svc.join(' ')}")
+                            remote("cd ${ECS_DOCKER_DIR} && docker compose up -d ${svc.join(' ')}")
                             sleep(time: 15, unit: 'SECONDS')
                         } else {
                             echo '  ⏭️ 无变更模块，跳过'
                         }
 
                         echo '>>> 服务状态:'
-                        remote("cd ${ECS_DOCKER_DIR} && docker compose ps 2>/dev/null || docker-compose ps")
+                        remote("cd ${ECS_DOCKER_DIR} && docker compose ps")
                     }
                 }
                 echo '✅ 部署完成'
