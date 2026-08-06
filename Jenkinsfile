@@ -58,50 +58,50 @@ pipeline {
         }
 
         // ============================================================
-        // 步骤 2：编译（Maven + npm 并行）
+        // 步骤 2：Maven 编译后端
         // ============================================================
-        stage('■ 2/4 编译') {
-            parallel {
-                stage('Maven 后端') {
-                    when { expression { env.CHANGED_AUTH == 'true' || env.CHANGED_GATE == 'true' || env.CHANGED_SYS == 'true' || env.CHANGED_GEN == 'true' || env.CHANGED_JOB == 'true' || env.CHANGED_FILE == 'true' } }
-                    steps {
-                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                        echo '  🔧 Maven 编译后端模块...'
-                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                        script {
-                            def modules = []
-                            if (env.CHANGED_AUTH == 'true') modules.add('ruoyi-auth')
-                            if (env.CHANGED_GATE == 'true') modules.add('ruoyi-gateway')
-                            if (env.CHANGED_SYS  == 'true') modules.add('ruoyi-modules/ruoyi-system')
-                            if (env.CHANGED_GEN  == 'true') modules.add('ruoyi-modules/ruoyi-gen')
-                            if (env.CHANGED_JOB  == 'true') modules.add('ruoyi-modules/ruoyi-job')
-                            if (env.CHANGED_FILE == 'true') modules.add('ruoyi-modules/ruoyi-file')
-                            echo "  编译模块: ${modules.join(', ')}"
-                            sh "mvn clean package -DskipTests -pl ${modules.join(',')} -am"
-                        }
-                        echo '  ✅ Maven 编译完成'
-                    }
+        stage('■ 2/5 Maven 后端') {
+            when { expression { env.CHANGED_AUTH == 'true' || env.CHANGED_GATE == 'true' || env.CHANGED_SYS == 'true' || env.CHANGED_GEN == 'true' || env.CHANGED_JOB == 'true' || env.CHANGED_FILE == 'true' } }
+            steps {
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                echo '  🔧 Maven 编译后端模块...'
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                script {
+                    def modules = []
+                    if (env.CHANGED_AUTH == 'true') modules.add('ruoyi-auth')
+                    if (env.CHANGED_GATE == 'true') modules.add('ruoyi-gateway')
+                    if (env.CHANGED_SYS  == 'true') modules.add('ruoyi-modules/ruoyi-system')
+                    if (env.CHANGED_GEN  == 'true') modules.add('ruoyi-modules/ruoyi-gen')
+                    if (env.CHANGED_JOB  == 'true') modules.add('ruoyi-modules/ruoyi-job')
+                    if (env.CHANGED_FILE == 'true') modules.add('ruoyi-modules/ruoyi-file')
+                    echo "  编译模块: ${modules.join(', ')}"
+                    sh "mvn clean package -DskipTests -pl ${modules.join(',')} -am"
                 }
-                stage('npm 前端') {
-                    when { expression { env.CHANGED_UI == 'true' } }
-                    steps {
-                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                        echo '  🎨 npm 构建前端...'
-                        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                        dir('ruoyi-ui') {
-                            sh 'npm install --registry=https://registry.npmmirror.com'
-                            sh 'npm run build:prod'
-                        }
-                        echo '  ✅ npm 构建完成'
-                    }
+                echo '  ✅ Maven 编译完成'
+            }
+        }
+
+        // ============================================================
+        // 步骤 3：npm 构建前端
+        // ============================================================
+        stage('■ 3/5 npm 前端') {
+            when { expression { env.CHANGED_UI == 'true' } }
+            steps {
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                echo '  🎨 npm 构建前端...'
+                echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+                dir('ruoyi-ui') {
+                    sh 'npm install --registry=https://registry.npmmirror.com'
+                    sh 'npm run build:prod'
                 }
+                echo '  ✅ npm 构建完成'
             }
         }
 
         // ============================================================
         // 步骤 3：Docker 构建 & 推送 ACR
         // ============================================================
-        stage('■ 3/4 Docker 构建 & 推送') {
+        stage('■ 4/5 Docker 构建 & 推送') {
             steps {
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
                 echo '  🔐 登录 ACR 镜像仓库...'
@@ -145,7 +145,7 @@ pipeline {
         // ============================================================
         // 步骤 4：kubectl 部署到 K8s
         // ============================================================
-        stage('■ 4/4 部署到 K8s') {
+        stage('■ 5/5 部署到 K8s') {
             steps {
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
                 echo '  🚀 更新镜像并部署...'
