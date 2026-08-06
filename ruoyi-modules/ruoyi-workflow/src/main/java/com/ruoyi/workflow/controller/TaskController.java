@@ -39,7 +39,7 @@ public class TaskController extends BaseController {
     /**
      * 查询某人待办任务（含加签任务），附带审批进度预览
      * v2.0 - 支持加签、会签、抄送
-     * CI/CD verified - v5
+     * CI/CD verified - v6
      *
      * @param assignee 审批人用户名
      * @return [{ taskId, taskName, processInstanceId, processName, createTime, variables, track }]

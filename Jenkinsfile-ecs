@@ -217,8 +217,8 @@ pipeline {
 
                         if (svc.size() > 0) {
                             echo "  🚀 重启: ${svc.join(' ')}"
-                            // 先 --no-cache build 再 up，确保新 JAR 生效
-                            remote("cd ${ECS_DOCKER_DIR} && docker compose build --no-cache ${svc.join(' ')} 2>/dev/null || docker-compose build --no-cache ${svc.join(' ')}")
+                            // 禁用 BuildKit，确保 COPY 新 JAR 必生效
+                            remote("cd ${ECS_DOCKER_DIR} && DOCKER_BUILDKIT=0 docker compose build --no-cache ${svc.join(' ')} 2>/dev/null || DOCKER_BUILDKIT=0 docker-compose build --no-cache ${svc.join(' ')}")
                             remote("cd ${ECS_DOCKER_DIR} && docker compose up -d --force-recreate ${svc.join(' ')} 2>/dev/null || docker-compose up -d --force-recreate ${svc.join(' ')}")
                             sleep(time: 15, unit: 'SECONDS')
                         } else {
