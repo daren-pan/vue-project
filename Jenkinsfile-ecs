@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        // ACR 镜像仓库
+        // ACR 镜像仓库（仅推送备份，部署不用）
         ACR_REGISTRY = 'crpi-zu4tna9y8drenzc4.cn-hangzhou.personal.cr.aliyuncs.com'
         ACR_NAMESPACE = 'ruoyi-personal'
         REG = "${ACR_REGISTRY}/${ACR_NAMESPACE}"
@@ -114,39 +114,29 @@ pipeline {
         }
 
         // ============================================================
-        // 步骤 3：Docker 构建 & 推送 ACR
+        // 步骤 4：Docker 构建 & 推送 ACR（备份，部署不用）
         // ============================================================
-        stage('■ 4/5 Docker 构建 & 推送 ACR') {
+        stage('■ 4/5 推送 ACR') {
             steps {
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                echo '  🔐 登录 ACR 镜像仓库...'
+                echo '  🔐 登录 ACR + 构建推送镜像...'
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
                 sh 'echo "$ACR_CREDENTIALS_PSW" | docker login --username "$ACR_CREDENTIALS_USR" --password-stdin $ACR_REGISTRY'
 
                 script {
-                    // 通用构建推送函数
                     def buildAndPush = { name, jarDir, ctx ->
-                        echo ''
-                        echo "━━━ 🐳 ruoyi-${name} ━━━"
+                        echo "━━━ 🐳 ruoyi-${name} → ACR ━━━"
                         sh "cp ${jarDir}/target/*.jar docker/ruoyi/${ctx}/jar/"
                         sh "docker build -t ${REG}/ruoyi-${name}:${env.UNIQUE_TAG} -t ${REG}/ruoyi-${name}:latest -f docker/ruoyi/${ctx}/dockerfile docker/ruoyi/${ctx}"
                         sh "docker push ${REG}/ruoyi-${name}:${env.UNIQUE_TAG}"
                         sh "docker push ${REG}/ruoyi-${name}:latest"
-                        echo "  ✅ ruoyi-${name}:${env.UNIQUE_TAG}"
                     }
-
-                    // 前端镜像（特殊处理）
                     if (env.CHANGED_UI == 'true') {
-                        echo ''
-                        echo '━━━ 🐳 ruoyi-nginx ━━━'
                         sh 'mkdir -p docker/nginx/html && rm -rf docker/nginx/html/dist && cp -r ruoyi-ui/dist docker/nginx/html/dist'
                         sh "docker build --no-cache -t ${REG}/ruoyi-nginx:${env.UNIQUE_TAG} -t ${REG}/ruoyi-nginx:latest -f docker/nginx/dockerfile docker/nginx"
                         sh "docker push ${REG}/ruoyi-nginx:${env.UNIQUE_TAG}"
                         sh "docker push ${REG}/ruoyi-nginx:latest"
-                        echo "  ✅ ruoyi-nginx:${env.UNIQUE_TAG}"
                     }
-
-                    // 后端镜像（增量）
                     if (env.CHANGED_AUTH == 'true')     buildAndPush('auth',     'ruoyi-auth',                   'auth')
                     if (env.CHANGED_GATE == 'true')     buildAndPush('gateway',  'ruoyi-gateway',                'gateway')
                     if (env.CHANGED_SYS == 'true')      buildAndPush('system',   'ruoyi-modules/ruoyi-system',   'modules/system')
@@ -160,12 +150,12 @@ pipeline {
         }
 
         // ============================================================
-        // 步骤 4：触发 ECS 部署（Jenkins 不操作宿主机 Docker）
+        // 步骤 5：复制产物 → 宿主机本地 build + 重启
         // ============================================================
-        stage('■ 5/5 触发 ECS 部署') {
+        stage('■ 5/5 宿主机构建镜像 & 重启') {
             steps {
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-                echo '  🚀 SSH 触发 ECS 自行拉取镜像并重启...'
+                echo '  🚀 复制构建产物 → 宿主机 build + 重启...'
                 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
 
                 withCredentials([
@@ -177,37 +167,45 @@ pipeline {
                     )
                 ]) {
                     script {
-                        // 配合 ssh 用的安全选项文件
+                        def scp = { src, dest ->
+                            sh "scp -o StrictHostKeyChecking=no -i ${SSH_KEY} -P ${ECS_PORT} ${src} ${ECS_USER}@${ECS_HOST}:${dest}"
+                        }
                         def remote = { cmd ->
                             sh "ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ${SSH_KEY} -p ${ECS_PORT} ${ECS_USER}@${ECS_HOST} '${cmd}'"
                         }
-                        def CD = "cd ${ECS_DOCKER_DIR}"
-                        def REPO = "cd ${ECS_REPO_DIR}"
+                        def HOST = "${ECS_USER}@${ECS_HOST}"
 
+                        // git pull 同步宿主机代码
                         echo '>>> git pull...'
-                        remote("${REPO} && git pull")
+                        remote("cd ${ECS_REPO_DIR} && git pull")
 
-                        // 只拉取变更模块的镜像 + re-tag 为 docker-compose 本地名
-                        def pullAndTag = { changed, acrName, localName ->
+                        // 复制变更的模块 JAR 到宿主机 docker 构建上下文
+                        def copyJar = { changed, jarDir, destDir ->
                             if (changed == 'true') {
-                                echo "  📥 ${acrName}"
-                                remote("docker pull ${REG}/${acrName}:${env.UNIQUE_TAG}")
-                                remote("docker tag ${REG}/${acrName}:${env.UNIQUE_TAG} ${localName}:latest")
+                                echo "  📦 ${destDir}"
+                                sh "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${ECS_PORT} ${HOST} 'mkdir -p ${ECS_REPO_DIR}/docker/ruoyi/${destDir}/jar'"
+                                scp("${jarDir}/target/*.jar", "${ECS_REPO_DIR}/docker/ruoyi/${destDir}/jar/")
                             }
                         }
+                        copyJar(env.CHANGED_AUTH,     'ruoyi-auth',                     'auth')
+                        copyJar(env.CHANGED_GATE,     'ruoyi-gateway',                  'gateway')
+                        copyJar(env.CHANGED_SYS,      'ruoyi-modules/ruoyi-system',      'modules/system')
+                        copyJar(env.CHANGED_GEN,      'ruoyi-modules/ruoyi-gen',         'modules/gen')
+                        copyJar(env.CHANGED_JOB,      'ruoyi-modules/ruoyi-job',         'modules/job')
+                        copyJar(env.CHANGED_FILE,     'ruoyi-modules/ruoyi-file',        'modules/file')
+                        copyJar(env.CHANGED_WORKFLOW, 'ruoyi-modules/ruoyi-workflow',    'modules/workflow')
+                        copyJar(env.CHANGED_MONITOR,  'ruoyi-visual/ruoyi-monitor',      'visual/monitor')
 
-                        pullAndTag(env.CHANGED_AUTH,     'ruoyi-auth',             'docker-ruoyi-auth')
-                        pullAndTag(env.CHANGED_GATE,     'ruoyi-gateway',          'docker-ruoyi-gateway')
-                        pullAndTag(env.CHANGED_SYS,      'ruoyi-system',           'docker-ruoyi-modules-system')
-                        pullAndTag(env.CHANGED_GEN,      'ruoyi-gen',              'docker-ruoyi-modules-gen')
-                        pullAndTag(env.CHANGED_JOB,      'ruoyi-job',              'docker-ruoyi-modules-job')
-                        pullAndTag(env.CHANGED_FILE,     'ruoyi-file',             'docker-ruoyi-modules-file')
-                        pullAndTag(env.CHANGED_WORKFLOW, 'ruoyi-workflow',         'docker-ruoyi-modules-workflow')
-                        pullAndTag(env.CHANGED_MONITOR,  'ruoyi-monitor',          'docker-ruoyi-visual-monitor')
-                        pullAndTag(env.CHANGED_UI,       'ruoyi-nginx',            'ruoyi-nginx')
-
-                        // 收集需重启的服务
+                        // 复制前端 dist
                         def svc = []
+                        if (env.CHANGED_UI == 'true') {
+                            echo '  📦 nginx (前端 dist)'
+                            remote("mkdir -p ${ECS_DOCKER_DIR}/nginx/html/dist && rm -rf ${ECS_DOCKER_DIR}/nginx/html/dist/*")
+                            sh "scp -o StrictHostKeyChecking=no -i ${SSH_KEY} -P ${ECS_PORT} -r ruoyi-ui/dist/* ${HOST}:${ECS_DOCKER_DIR}/nginx/html/dist/"
+                            svc.add('ruoyi-nginx')
+                        }
+
+                        // 收集变更的服务，在宿主机 docker build + restart
                         if (env.CHANGED_AUTH == 'true')     svc.add('ruoyi-auth')
                         if (env.CHANGED_GATE == 'true')     svc.add('ruoyi-gateway')
                         if (env.CHANGED_SYS == 'true')      svc.add('ruoyi-modules-system')
@@ -216,21 +214,21 @@ pipeline {
                         if (env.CHANGED_FILE == 'true')     svc.add('ruoyi-modules-file')
                         if (env.CHANGED_WORKFLOW == 'true') svc.add('ruoyi-modules-workflow')
                         if (env.CHANGED_MONITOR == 'true')  svc.add('ruoyi-visual-monitor')
-                        if (env.CHANGED_UI == 'true')       svc.add('ruoyi-nginx')
 
                         if (svc.size() > 0) {
                             echo "  🚀 重启: ${svc.join(' ')}"
-                            remote("${CD} && docker compose up -d --force-recreate ${svc.join(' ')} 2>/dev/null || docker-compose up -d --force-recreate ${svc.join(' ')}")
+                            // 用 --build 重建镜像 + 重启
+                            remote("cd ${ECS_DOCKER_DIR} && docker compose up -d --build ${svc.join(' ')} 2>/dev/null || docker-compose up -d --build ${svc.join(' ')}")
                             sleep(time: 15, unit: 'SECONDS')
                         } else {
-                            echo '  ⏭️ 无变更模块，跳过重启'
+                            echo '  ⏭️ 无变更模块，跳过'
                         }
 
                         echo '>>> 服务状态:'
-                        remote("${CD} && docker compose ps 2>/dev/null || docker-compose ps")
+                        remote("cd ${ECS_DOCKER_DIR} && docker compose ps 2>/dev/null || docker-compose ps")
                     }
                 }
-                echo '✅ 部署触发完成'
+                echo '✅ 部署完成'
             }
         }
     }
@@ -240,7 +238,6 @@ pipeline {
             echo ''
             echo '╔══════════════════════════════════════════╗'
             echo "║  ✅ ECS 部署 #${BUILD_NUMBER} 成功！              ║"
-            echo "║  标签: ${env.UNIQUE_TAG}         ║"
             echo '╚══════════════════════════════════════════╝'
         }
         failure {
