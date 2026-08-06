@@ -25,6 +25,7 @@
         <span style="line-height:28px;font-size:12px;color:#666;">
           颜色说明：<el-tag size="mini" type="warning" effect="plain">待审批</el-tag>
           <el-tag size="mini" type="info" effect="plain" style="margin-left:4px;">抄送</el-tag>
+          <el-tag size="mini" type="danger" effect="plain" style="margin-left:4px;">会签</el-tag>
         </span>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="handleQuery"></right-toolbar>
