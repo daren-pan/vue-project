@@ -109,8 +109,8 @@
       - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=ruoyi-nacos:8848
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD}
-      - JAVA_OPTS=-Xmx384m -Xms256m
-    mem_limit: 640m
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    mem_limit: 896m
   ruoyi-auth:
     container_name: ruoyi-auth
     image: docker-ruoyi-auth:3.6.7
@@ -133,8 +133,8 @@
       - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=ruoyi-nacos:8848
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD}
-      - JAVA_OPTS=-Xmx384m -Xms256m
-    mem_limit: 640m
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    mem_limit: 896m
   ruoyi-modules-system:
     container_name: ruoyi-modules-system
     image: docker-ruoyi-modules-system:3.6.7
@@ -165,8 +165,8 @@
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
       - SPRING_CLOUD_NACOS_DISCOVERY_WEIGHT=1
-      - JAVA_OPTS=-Xmx384m -Xms256m
-    mem_limit: 640m
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    mem_limit: 896m
       # 添加 SkyWalking Agent 配置
       #- JAVA_OPTS=-javaagent:/sw-agent/skywalking-agent.jar -Dskywalking.agent.service_name=ruoyi-modules-system
       #- SW_AGENT_COLLECTOR_BACKEND_SERVICES=oap:11800
@@ -300,8 +300,8 @@
       - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
-      - JAVA_OPTS=-Xmx512m -Xms256m
-    mem_limit: 768m
+      - JAVA_OPTS=-Xmx640m -Xms256m
+    mem_limit: 1024m
   elasticsearch:
     image: elasticsearch:7.17.0
     container_name: ruoyi-skywalking-es
