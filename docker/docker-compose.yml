@@ -406,7 +406,7 @@
     container_name: ruoyi-jenkins
     image: jenkins/jenkins:lts-jdk17
     restart: always
-    mem_limit: 3g
+    mem_limit: 4g
     ports:
       - "8081:8080"
       - "50000:50000"
@@ -415,7 +415,7 @@
       - DOCKER_TLS_VERIFY=1
       - DOCKER_CERT_PATH=/certs/client
       - KUBECONFIG=/var/jenkins_home/.kube/config
-      - JAVA_OPTS=-Xmx2g -Xms1g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError
+      - JAVA_OPTS=-Xmx3g -Xms1g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError
     volumes:
       - jenkins-data:/var/jenkins_home
       - dind-certs:/certs:ro
