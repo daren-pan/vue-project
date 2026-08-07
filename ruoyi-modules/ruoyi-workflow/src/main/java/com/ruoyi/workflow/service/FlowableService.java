@@ -1,5 +1,6 @@
 package com.ruoyi.workflow.service;
 
+import com.ruoyi.common.core.exception.WorkflowException;
 import org.flowable.engine.*;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.repository.ProcessDefinition;
@@ -179,7 +180,7 @@ public class FlowableService {
      */
     public void rollbackToPrevious(String taskId) {
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
-        if (task == null) throw new RuntimeException("任务「" + taskId + "」不存在，无法回退");
+        if (task == null) throw new WorkflowException("任务「" + taskId + "」不存在，无法回退");
         String piId = task.getProcessInstanceId();
         if (piId == null) return;
 
@@ -196,7 +197,7 @@ public class FlowableService {
                 break;
             }
         }
-        if (targetActivityId == null) throw new RuntimeException("已是首个审批节点，无法驳回到上一步");
+        if (targetActivityId == null) throw new WorkflowException("已是首个审批节点，无法驳回到上一步");
 
         // 取消当前所有活跃任务
         List<Task> activeTasks = taskService.createTaskQuery().processInstanceId(piId).list();
@@ -213,7 +214,7 @@ public class FlowableService {
                 break;
             }
         }
-        if (currentDefKey == null) throw new RuntimeException("未找到可回退的当前节点");
+        if (currentDefKey == null) throw new WorkflowException("未找到可回退的当前节点");
         // 移动流程回到上一个节点
         runtimeService.createChangeActivityStateBuilder()
                 .processInstanceId(piId)
@@ -364,5 +365,33 @@ public class FlowableService {
         return historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
+    }
+
+    // ==================== 辅助查询 ====================
+
+    /**
+     * 根据流程定义 ID 获取流程名称
+     */
+    public String getProcessName(String processDefinitionId) {
+        try {
+            ProcessDefinition pd = repositoryService.getProcessDefinition(processDefinitionId);
+            return pd != null ? pd.getName() : "-";
+        } catch (Exception e) {
+            System.err.println("[workflow] 查询流程名称失败(defId=" + processDefinitionId + "): " + e.getMessage());
+            return "-";
+        }
+    }
+
+    /**
+     * 根据流程实例 ID 获取流程名称
+     */
+    public String getProcessNameByInstance(String processInstanceId) {
+        try {
+            HistoricProcessInstance hi = getHistoricProcessInstance(processInstanceId);
+            if (hi != null) return getProcessName(hi.getProcessDefinitionId());
+        } catch (Exception e) {
+            System.err.println("[workflow] 查询历史实例失败(piId=" + processInstanceId + "): " + e.getMessage());
+        }
+        return "-";
     }
 }

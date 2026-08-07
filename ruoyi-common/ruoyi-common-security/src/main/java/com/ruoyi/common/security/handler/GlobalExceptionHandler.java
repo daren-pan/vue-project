@@ -14,6 +14,7 @@ import com.ruoyi.common.core.constant.HttpStatus;
 import com.ruoyi.common.core.exception.DemoModeException;
 import com.ruoyi.common.core.exception.InnerAuthException;
 import com.ruoyi.common.core.exception.ServiceException;
+import com.ruoyi.common.core.exception.WorkflowException;
 import com.ruoyi.common.core.exception.auth.NotPermissionException;
 import com.ruoyi.common.core.exception.auth.NotRoleException;
 import com.ruoyi.common.core.text.Convert;
@@ -162,5 +163,16 @@ public class GlobalExceptionHandler
     public AjaxResult handleDemoModeException(DemoModeException e)
     {
         return AjaxResult.error("演示模式，不允许操作");
+    }
+
+    /**
+     * 工作流业务异常
+     */
+    @ExceptionHandler(WorkflowException.class)
+    public AjaxResult handleWorkflowException(WorkflowException e)
+    {
+        log.error(e.getMessage(), e);
+        Integer code = e.getCode();
+        return code != null ? AjaxResult.error(code, e.getMessage()) : AjaxResult.error(e.getMessage());
     }
 }

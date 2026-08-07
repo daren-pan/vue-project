@@ -1,5 +1,6 @@
-package com.ruoyi.workflow.core;
+package com.ruoyi.workflow.service;
 
+import com.ruoyi.workflow.domain.vo.ProcessConfigDTO;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
 import org.flowable.bpmn.model.ExclusiveGateway;
@@ -120,7 +121,7 @@ public class ProcessBuilder {
     // ────────── 从表格配置构建 ──────────
 
     public static String deployFromConfig(
-            com.ruoyi.workflow.model.ProcessConfigDTO config,
+            ProcessConfigDTO config,
             RepositoryService repositoryService,
             String deployUser) {
 
@@ -133,7 +134,7 @@ public class ProcessBuilder {
             config.getLines().stream().map(l -> l.getFrom() + "→" + l.getTo() +
                 (l.getCondition() != null && !l.getCondition().isEmpty() ? "[" + l.getCondition() + "]" : "")).toList());
 
-        for (com.ruoyi.workflow.model.ProcessConfigDTO.NodeDef node : config.getNodes()) {
+        for (ProcessConfigDTO.NodeDef node : config.getNodes()) {
             switch (node.getType()) {
                 case "startEvent" -> pb.startEvent(node.getId(), node.getName());
                 case "endEvent"   -> pb.endEvent(node.getId(), node.getName());
@@ -151,7 +152,7 @@ public class ProcessBuilder {
             }
         }
 
-        for (com.ruoyi.workflow.model.ProcessConfigDTO.LineDef line : config.getLines()) {
+        for (ProcessConfigDTO.LineDef line : config.getLines()) {
             pb.flow(line.getFrom(), line.getTo(), line.getCondition());
         }
 

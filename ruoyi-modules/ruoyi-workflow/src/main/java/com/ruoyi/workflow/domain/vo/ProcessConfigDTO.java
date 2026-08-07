@@ -1,4 +1,4 @@
-package com.ruoyi.workflow.model;
+package com.ruoyi.workflow.domain.vo;
 
 import java.util.List;
 
