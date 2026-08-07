@@ -218,6 +218,7 @@ public class ProcessInstanceController extends BaseController {
         });
 
         // 3. 当前待审批节点（排除已完成中出现过的）
+        boolean mainApprovedFlag = vars.get("_mainApproved") instanceof Boolean b && b;
         flowableService.listTasksByInstance(processInstanceId).forEach(t -> {
             // 加签等待中的主任务：assignee 被置为 null，用 _mainApprover 还原
             String curAssignee = t.getAssignee();
@@ -228,7 +229,13 @@ public class ProcessInstanceController extends BaseController {
             m.put("node", t.getName());
             m.put("startTime", t.getCreateTime());
             m.put("assignee", curAssignee);
-            m.put("status", "pending");
+            // 主审批人已通过（等待加签中）→ 显示"通过"而非"审批中"
+            if (mainApprovedFlag && t.getAssignee() == null) {
+                m.put("status", "completed");
+                m.put("action", "通过(等待加签)");
+            } else {
+                m.put("status", "pending");
+            }
             list.add(m);
             added.add(key);
         });

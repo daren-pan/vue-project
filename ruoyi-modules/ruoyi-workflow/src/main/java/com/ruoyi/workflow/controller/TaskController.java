@@ -131,11 +131,13 @@ public class TaskController extends BaseController {
             vars.put("_signCount", newCount);
             runtimeService.setVariables(parentPiId, vars);
 
-            // 所有加签完成且主审批人已通过 → 完成主任务推进流程
+            // 所有加签完成且主审批人已通过 → 还原 assignee 并完成主任务
             boolean mainApproved = vars.get("_mainApproved") instanceof Boolean b && b;
             if (newCount <= 1 && mainApproved) {
                 Task mainTask = taskService.createTaskQuery().taskId(task.getParentTaskId()).singleResult();
                 if (mainTask != null) {
+                    // 主任务 assignee 被置为 null，需还原才能 complete
+                    taskService.setAssignee(mainTask.getId(), (String) vars.get("_mainApprover"));
                     flowableService.completeTask(mainTask.getId(), Map.of("approved", true));
                 }
             }
