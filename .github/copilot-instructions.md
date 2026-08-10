@@ -21,6 +21,7 @@
 - 这不是可选的建议，是**必须执行**的步骤
 - 编译失败不要等用户提醒，主动修复
 - 最终目标：用户不需要手动跑任何验证
+- **批量替换代码必须用 `multi_replace_string_in_file` 逐个文件修改**，禁止使用 `run_in_terminal` 执行 PowerShell 批量替换命令（如 `Get-Content | ForEach-Object | Set-Content`），防止中文注释和字符乱码
 
 ## 项目模块编码规范（参照 ruoyi-system，所有新增模块必须遵守）
 
