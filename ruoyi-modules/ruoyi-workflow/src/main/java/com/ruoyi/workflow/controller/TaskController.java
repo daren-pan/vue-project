@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * 任务管理（待办 / 审批 / 已办历史）
+ * v2.1 - 支持 MCP 辅助查询
  *
  * @author ruoyi
  */

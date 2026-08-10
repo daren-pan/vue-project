@@ -121,6 +121,32 @@ RuoYi-Cloud 前端项目的三个主要演进版本，方便你直观对比其�
     </tr>
 	<tr>
         <td><img src="https://oscimg.oschina.net/oscnet/up-8370a0d02977eebf6dbf854c8450293c937.png"/></td>
+    </tr>
+</table>
+
+## MCP 开发辅助（VS Code Copilot）
+
+项目已内置 MCP (Model Context Protocol) 配置，让 AI 助手直接查询数据库和分析代码。
+
+### 前提条件
+
+- Node.js ≥ 18（npx 可用）
+- Docker MySQL 运行中（`docker compose up -d ruoyi-mysql`）
+
+### 使用方式
+
+1. 打开 VS Code → `Ctrl+Shift+P` → `Reload Window`
+2. MCP Server 自动启动（控制台输出 `Discovered 4 tools` 即成功）
+3. 直接对话查询：
+   - 「查一下 sys_user 表有多少用户」
+   - 「最近5条工作流审批记录」
+   - 「act_hi_taskinst 表结构」
+
+### 配置
+
+- MySQL 业务库：`mysql-ry`（ry-cloud）
+- MySQL 工作流库：`mysql-flowable`（ry-flowable）
+- 配置文件：`.vscode/mcp.json`
         <td><img src="https://oscimg.oschina.net/oscnet/up-49003ed83f60f633e7153609a53a2b644f7.png"/></td>
     </tr>
 	<tr>
