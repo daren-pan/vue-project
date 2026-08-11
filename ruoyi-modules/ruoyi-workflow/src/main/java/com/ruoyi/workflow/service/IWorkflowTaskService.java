@@ -28,6 +28,11 @@ public interface IWorkflowTaskService {
     TaskResult approve(String taskId, String comment);
 
     /**
+     * 批量审批通过 —— 逐个审批，单个失败不影响其余
+     */
+    List<TaskResult> batchApprove(List<String> taskIds, String comment);
+
+    /**
      * 审批驳回
      */
     TaskResult reject(String taskId, String reason);

@@ -176,6 +176,23 @@ public class WorkflowTaskServiceImpl implements IWorkflowTaskService {
     }
 
     @Override
+    public List<TaskResult> batchApprove(List<String> taskIds, String comment) {
+        List<TaskResult> results = new ArrayList<>();
+        for (String taskId : taskIds) {
+            try {
+                results.add(approve(taskId, comment));
+            } catch (WorkflowException e) {
+                TaskResult r = new TaskResult();
+                r.setTaskId(taskId);
+                r.setAction("审批失败");
+                r.setTip(e.getMessage());
+                results.add(r);
+            }
+        }
+        return results;
+    }
+
+    @Override
     public TaskResult reject(String taskId, String reason) {
         Task task = flowableService.getTask(taskId);
         if (task == null) throw new WorkflowException("驳回失败：任务「" + taskId + "」不存在或已被处理");

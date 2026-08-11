@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 任务管理（待办 / 审批 / 已办历史）
@@ -45,6 +46,20 @@ public class TaskController extends BaseController {
     public R<TaskResult> approve(@RequestParam String taskId,
                                  @RequestParam(defaultValue = "同意") String comment) {
         return R.ok(workflowTaskService.approve(taskId, comment));
+    }
+
+    /**
+     * 批量审批通过 —— 逐个审批，单个失败不影响其余
+     */
+    @PostMapping("/batchApprove")
+    public R<List<TaskResult>> batchApprove(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> taskIds = (List<String>) body.get("taskIds");
+        String comment = (String) body.getOrDefault("comment", "同意");
+        if (taskIds == null || taskIds.isEmpty()) {
+            return R.fail("taskIds 不能为空");
+        }
+        return R.ok(workflowTaskService.batchApprove(taskIds, comment));
     }
 
     /**
