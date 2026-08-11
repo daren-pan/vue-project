@@ -1,5 +1,4 @@
 {
-    "chat.agent.sessionTarget": "copilot-worktree",
     "chat.mcp.serverSampling": {
         "RuoYi-Cloud/.vscode/mcp.json: mysql-ry": {
             "allowedModels": [

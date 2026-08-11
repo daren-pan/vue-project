@@ -1,6 +1,6 @@
 ---
 name: ruoyi-workflow-dev
-description: RuoYi-Cloud 工作流模块开发指南，覆盖审批、驳回、加签、抄送、部署等全流程
+description: RuoYi-Cloud 工作流模块开发指南，覆盖审批、驳回、加签、抄送、部署等全流程。当修改或新增工作流相关代码时自动加载。
 ---
 
 # RuoYi-Cloud 工作流模块开发指南
@@ -95,7 +95,7 @@ public class XxxVO {
 
 - 业务库：`ry-cloud`（sys_user 等）
 - 工作流库：`ry-flowable`（act_hi_taskinst、act_re_procdef 等）
-- MCP 可直查（只读），命令：`mvn compile -pl ruoyi-modules/ruoyi-workflow -am -q`
+- MCP 可直查（只读）
 
 ## 编译命令
 
