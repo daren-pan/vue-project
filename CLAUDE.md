@@ -1,8 +1,8 @@
-# 修改 Java 文件后必须自动编译验证
+# RuoYi-Cloud 项目指令
 
-## 规则
+## 编译验证规则
 
-每次使用 `replace_string_in_file` 或 `create_file` 修改 `.java` 文件后，**必须立即**执行以下操作：
+每次使用 Edit / Write 等工具修改 `.java` 文件后，**必须立即**执行以下操作：
 
 1. 找到该文件所属的 Maven 模块（向上查找最近的 `pom.xml`）
 2. 运行：`mvn compile -pl <模块路径> -am -q 2>&1`
@@ -14,14 +14,14 @@
 
 ## Vue/JS 文件
 
-修改 `.vue` / `.js` / `.ts` 文件后，调用 `get_errors` 检查 lint 错误。
+修改 `.vue` / `.js` / `.ts` 文件后，检查 IDE 诊断信息（Claude Code 在 VS Code 中会自动收到编辑器诊断），有错误立即修复。
 
 ## 原则
 
 - 这不是可选的建议，是**必须执行**的步骤
 - 编译失败不要等用户提醒，主动修复
 - 最终目标：用户不需要手动跑任何验证
-- **批量替换代码必须用 `multi_replace_string_in_file` 逐个文件修改**，禁止使用 `run_in_terminal` 执行 PowerShell 批量替换命令（如 `Get-Content | ForEach-Object | Set-Content`），防止中文注释和字符乱码
+- **批量修改代码必须逐个文件使用 Edit 工具**，禁止使用 Bash 执行 PowerShell 批量替换命令（如 `Get-Content | ForEach-Object | Set-Content`），防止中文注释和字符乱码
 
 ## 文件操作说明
 
@@ -83,11 +83,10 @@ config/            — 配置类
 
 ## 工作流模块（ruoyi-workflow）专项规范
 
-以下为工作流模块特有的规范，通用规范见上方。
+以下为工作流模块特有的规范，通用规范见上方。模块开发细节见 `.claude/skills/ruoyi-workflow-dev/SKILL.md`。
 
 ### 编译命令
 
 ```
 mvn compile -pl ruoyi-modules/ruoyi-workflow -am -q 2>&1
 ```
-

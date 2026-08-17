@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RuoYi-Cloud Workflow 审批流程全景图</title>
+<style>
+:root {
+  --surface-1: #fcfcfb;
+  --page: #f9f9f7;
+  --ink-1: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --good: #0ca30c;
+  --crit: #d03b3b;
+  --serious: #ec835a;
+  --warn: #fab219;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-3: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --surface-1: #1a1a19;
+  --page: #0d0d0d;
+  --ink-1: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-3: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 32px 20px 64px;
+  background: var(--page);
+  color: var(--ink-1);
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  line-height: 1.55;
+}
+.wrap { max-width: 1120px; margin: 0 auto; }
+h1 { font-size: 24px; margin: 0 0 6px; }
+.sub { color: var(--ink-2); font-size: 13px; margin: 0 0 24px; }
+h2 { font-size: 16px; margin: 40px 0 12px; }
+h2 .no { color: var(--ink-3); font-weight: 500; margin-right: 8px; }
+
+/* ── 图例 ── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px 24px;
+  border: 1px solid var(--grid); border-radius: 8px;
+  padding: 14px 16px; background: var(--surface-1);
+  font-size: 12px; color: var(--ink-2); margin-bottom: 20px;
+}
+.legend .grp { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.legend .grp-title { color: var(--ink-3); }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw-b { border: 2px solid var(--ink-2); background: transparent; }
+.sw-line { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+.sw-dash { border-top-style: dashed; }
+.sw-dot { border-top-style: dotted; }
+
+/* ── 图表容器 ── */
+.figure {
+  border: 1px solid var(--grid); border-radius: 8px;
+  background: var(--surface-1); padding: 16px 12px 8px;
+  margin-bottom: 12px;
+}
+.figure figcaption { font-size: 12px; color: var(--ink-3); padding: 4px 4px 8px; }
+svg { width: 100%; height: auto; display: block; }
+svg text { font-family: inherit; }
+
+.lane { fill: var(--surface-1); stroke: var(--grid); stroke-width: 1; }
+.lane-lab { font-size: 12px; fill: var(--ink-3); letter-spacing: 2px; }
+
+.node { fill: var(--surface-1); stroke-width: 2; rx: 8; }
+.n-s1 { stroke: var(--s1); }
+.n-s2 { stroke: var(--s2); }
+.n-s3 { stroke: var(--s3); }
+.n-ink { stroke: var(--axis); stroke-width: 1.5; }
+.n-good { stroke: var(--good); }
+.n-crit { stroke: var(--crit); }
+.n-warn { stroke: var(--warn); }
+.n-serious { stroke: var(--serious); }
+.n-title { fill: var(--ink-1); font-size: 14px; font-weight: 600; }
+.n-sub { fill: var(--ink-3); font-size: 11px; }
+.n-mid { fill: var(--ink-1); font-size: 13px; font-weight: 600; }
+.n-mini { fill: var(--ink-1); font-size: 12px; font-weight: 600; }
+.n-tiny { fill: var(--ink-3); font-size: 10px; }
+
+.edge { fill: none; stroke-width: 2; pointer-events: none; }
+.edge-good { stroke: var(--good); }
+.edge-crit { stroke: var(--crit); }
+.edge-warn { stroke: var(--warn); }
+.edge-serious { stroke: var(--serious); }
+.edge-muted { stroke: var(--ink-3); }
+.edge-aqua { stroke: var(--s3); }
+.edge-ink { stroke: var(--ink-2); }
+.dash { stroke-dasharray: 7 5; }
+.dot { stroke-dasharray: 2 5; }
+.hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: help; }
+.el {
+  font-size: 12px; fill: var(--ink-2);
+  paint-order: stroke; stroke: var(--surface-1);
+  stroke-width: 4px; stroke-linejoin: round;
+}
+.note { font-size: 11px; fill: var(--ink-3); }
+
+/* ── 表格 ── */
+table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--surface-1); border: 1px solid var(--grid);
+  border-radius: 8px; overflow: hidden;
+}
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { background: var(--surface-1); color: var(--ink-3); font-weight: 600; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+td.mono, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; color: var(--ink-2); }
+td { color: var(--ink-1); }
+td.dim { color: var(--ink-2); }
+.tag {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; border: 1px solid; white-space: nowrap;
+}
+.tag-good { color: var(--good); border-color: var(--good); }
+.tag-crit { color: var(--crit); border-color: var(--crit); }
+.tag-warn { color: var(--warn); border-color: var(--warn); }
+.tag-serious { color: var(--serious); border-color: var(--serious); }
+.tag-aqua { color: var(--s3); border-color: var(--s3); }
+.tag-new { color: var(--s1); border-color: var(--s1); }
+.foot { font-size: 12px; color: var(--ink-3); margin-top: 16px; }
+.foot a { color: var(--s1); text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+
+/* ── 悬浮提示 ── */
+#tip {
+  position: fixed; display: none; z-index: 20;
+  max-width: 340px; padding: 8px 12px;
+  background: var(--surface-1); border: 1px solid var(--axis);
+  border-radius: 8px; font-size: 12px; color: var(--ink-1);
+  box-shadow: 0 4px 16px rgba(0,0,0,.18); pointer-events: none;
+}
+</style>
+</head>
+<body data-palette="#2a78d6,#eb6834,#1baf7a">
+<div class="wrap">
+
+<h1>RuoYi-Cloud Workflow 审批流程全景图</h1>
+<p class="sub">ruoyi-workflow 模块 · Flowable 引擎 · 表格配置驱动（ProcessConfigDTO → ProcessBuilder → BPMN 部署）</p>
+
+<!-- ══ 图例 ══ -->
+<div class="legend">
+  <span class="grp"><span class="grp-title">节点身份</span>
+    <span class="sw" style="background:var(--s1)"></span>发起 / 申请人
+    <span class="sw" style="background:var(--s2)"></span>审批任务
+    <span class="sw" style="background:var(--s3)"></span>会签 / 加签
+    <span class="sw sw-b"></span>结束 / 抄送
+  </span>
+  <span class="grp"><span class="grp-title">操作结果</span>
+    <span class="sw" style="background:var(--good)"></span>✓ 通过
+    <span class="sw" style="background:var(--crit)"></span>✕ 驳回
+    <span class="sw" style="background:var(--warn)"></span>↩ 撤回 · ↺ 驳回到上一步
+    <span class="sw" style="background:var(--serious)"></span>⊘ 强制删除
+  </span>
+  <span class="grp"><span class="grp-title">连线</span>
+    <span class="sw-line" style="border-color:var(--ink-2)"></span>正常推进
+    <span class="sw-line sw-dash" style="border-color:var(--ink-2)"></span>终止 / 异常
+    <span class="sw-line sw-dot" style="border-color:var(--ink-2)"></span>加签 / 独立任务
+  </span>
+</div>
+
+<!-- ══ 图 1：审批全流程 ══ -->
+<figure class="figure">
+<svg viewBox="0 0 1320 680" role="img" aria-label="审批全流程泳道图">
+<defs>
+  <marker id="ma-ink" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-2)"/></marker>
+  <marker id="ma-good" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--good)"/></marker>
+  <marker id="ma-crit" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--crit)"/></marker>
+  <marker id="ma-warn" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--warn)"/></marker>
+  <marker id="ma-serious" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--serious)"/></marker>
+  <marker id="ma-muted" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-3)"/></marker>
+</defs>
+
+<!-- 泳道 -->
+<rect class="lane" x="16" y="36" width="1288" height="84"/>
+<rect class="lane" x="16" y="150" width="1288" height="280"/>
+<rect class="lane" x="16" y="450" width="1288" height="120"/>
+<rect class="lane" x="16" y="590" width="1288" height="78"/>
+<text class="lane-lab" x="30" y="60">申 请 人</text>
+<text class="lane-lab" x="30" y="174">审 批 主 流 程（Flowable 推进）</text>
+<text class="lane-lab" x="30" y="474">终 态</text>
+<text class="lane-lab" x="30" y="614">抄 送（流程结束后自动）</text>
+
+<!-- 泳道 A：申请人动作 -->
+<rect class="node n-s1" x="90" y="56" width="430" height="44" rx="8" data-tip="发起流程：传入 processKey + applicant + 业务变量。<br>服务端注入 applicant、deptLeader、parentDeptLeader 及会签名单 assigneeList_*，随后 startProcessInstanceByKey 启动实例，创建首个审批任务。"/>
+<text class="n-mid" x="305" y="74" text-anchor="middle">▶ 发起申请 — POST /instance/start</text>
+<text class="n-tiny" x="305" y="90" text-anchor="middle">processKey · applicant · 业务变量</text>
+<rect class="node n-warn" x="560" y="56" width="480" height="44" rx="8" data-tip="撤回：仅申请人本人可操作，且流程必须尚无任何审批记录（无已完成任务）。<br>执行后删除流程实例，历史标记「已撤回」并出现在申请人已办列表。"/>
+<text class="n-mid" x="800" y="74" text-anchor="middle">↩ 撤回 — POST /instance/{id}/withdraw</text>
+<text class="n-tiny" x="800" y="90" text-anchor="middle">仅申请人 · 且尚无审批记录</text>
+
+<!-- 主流程节点 -->
+<rect class="node n-s1" x="70" y="268" width="180" height="64" rx="8" data-tip="发起申请：申请人填写表单并提交。系统通过 RemoteUserService 解析审批链（deptLeader / parentDeptLeader，失败兜底 admin）。"/>
+<text class="n-title" x="160" y="296" text-anchor="middle">发起申请</text>
+<text class="n-sub" x="160" y="318" text-anchor="middle">申请人 · 注入审批链变量</text>
+
+<rect class="node n-s2" x="330" y="268" width="180" height="64" rx="8" data-tip="审批节点 A：处理人 approve 后任务完成，携带 approved=true 由 exclusiveGateway 判断条件分支（如 ${days gt 3}）。"/>
+<text class="n-title" x="420" y="296" text-anchor="middle">审批节点 A</text>
+<text class="n-sub" x="420" y="318" text-anchor="middle">部门经理 · userTask</text>
+
+<rect class="node n-s3" x="590" y="268" width="180" height="64" rx="8" data-tip="会签节点：设计时 assigneeList 多人 → 并行多实例，所有会签人全部通过才推进（nrOfCompletedInstances == nrOfInstances）。细节见下图。"/>
+<text class="n-title" x="680" y="296" text-anchor="middle">会签节点</text>
+<text class="n-sub" x="680" y="318" text-anchor="middle">多人并行 · 全部通过才推进</text>
+
+<rect class="node n-s2" x="850" y="268" width="180" height="64" rx="8" data-tip="审批节点 B：最后一个审批环节，通过后流程到达结束节点。"/>
+<text class="n-title" x="940" y="296" text-anchor="middle">审批节点 B</text>
+<text class="n-sub" x="940" y="318" text-anchor="middle">总经理 · userTask</text>
+
+<rect class="node n-ink" x="1110" y="268" width="140" height="64" rx="8" data-tip="流程结束：实例结束，触发 createCcTasks 为申请人 + ccUsers 自动创建抄送任务。"/>
+<text class="n-title" x="1180" y="296" text-anchor="middle">流程结束</text>
+<text class="n-sub" x="1180" y="318" text-anchor="middle">endEvent</text>
+
+<!-- 主流程连线 -->
+<line class="edge edge-ink" x1="250" y1="300" x2="326" y2="300" marker-end="url(#ma-ink)"/>
+<line class="hit" x1="250" y1="300" x2="326" y2="300" data-tip="提交申请后，任务进入第一个审批节点。"/>
+<text class="el" x="288" y="290" text-anchor="middle">提交</text>
+
+<line class="edge edge-good" x1="514" y1="300" x2="586" y2="300" marker-end="url(#ma-good)"/>
+<line class="hit" x1="514" y1="300" x2="586" y2="300" data-tip="通过：POST /task/approve（comment 默认「同意」）→ completeTask(approved=true) → 网关判定下一节点。"/>
+<text class="el" x="550" y="290" text-anchor="middle">✓ 通过</text>
+
+<line class="edge edge-good" x1="774" y1="300" x2="846" y2="300" marker-end="url(#ma-good)"/>
+<line class="hit" x1="774" y1="300" x2="846" y2="300" data-tip="会签全部通过后推进到下一审批节点。"/>
+<text class="el" x="810" y="290" text-anchor="middle">✓ 通过</text>
+
+<line class="edge edge-good" x1="1034" y1="300" x2="1106" y2="300" marker-end="url(#ma-good)"/>
+<line class="hit" x1="1034" y1="300" x2="1106" y2="300" data-tip="通过：最后一个节点完成 → 流程结束。"/>
+<text class="el" x="1070" y="290" text-anchor="middle">✓ 通过</text>
+
+<!-- 撤回 -->
+<line class="edge edge-warn dash" x1="160" y1="332" x2="160" y2="474" marker-end="url(#ma-warn)"/>
+<line class="hit" x1="160" y1="332" x2="160" y2="474" data-tip="撤回：申请人发起，删除整个流程实例（deleteReason=申请人撤回）。"/>
+<text class="el" x="174" y="408" text-anchor="start">↩ 撤回 · 仅申请人</text>
+
+<!-- 驳回 -->
+<line class="edge edge-crit dash" x1="680" y1="332" x2="680" y2="474" marker-end="url(#ma-crit)"/>
+<line class="hit" x1="680" y1="332" x2="680" y2="474" data-tip="驳回：POST /task/reject（reason 默认「不同意」）。任意审批节点可驳回。<br>记录评论后删除整个流程实例，已办历史任务状态显示「已退回」。"/>
+<text class="el" x="694" y="408" text-anchor="start">✕ 驳回 · 任意审批节点</text>
+
+<!-- 强制删除 -->
+<line class="edge edge-serious dash" x1="940" y1="332" x2="940" y2="474" marker-end="url(#ma-serious)"/>
+<line class="hit" x1="940" y1="332" x2="940" y2="474" data-tip="强制删除：POST /task/deleteInstance。管理员清理：先删除加签/抄送等孤儿任务，再删除流程实例。"/>
+<text class="el" x="954" y="408" text-anchor="start">⊘ 强制删除 · 管理员</text>
+
+<!-- 结束 → 抄送 -->
+<line class="edge edge-muted" x1="1180" y1="332" x2="1180" y2="596" marker-end="url(#ma-muted)"/>
+<line class="hit" x1="1180" y1="332" x2="1180" y2="596" data-tip="流程结束瞬间，系统自动为申请人 + ccUsers 创建独立抄送任务（名称 [抄送] 流程名）。"/>
+<text class="el" x="1168" y="500" text-anchor="end">流程结束 → 自动创建</text>
+
+<!-- 主流程区注释 -->
+<text class="note" x="330" y="380">· 通过 = completeTask(approved=true)；条件分支由 exclusiveGateway 判定（如 ${days gt 3}）</text>
+<text class="note" x="330" y="400">· 会签节点（多实例）与运行时加签（独立任务）的机制细节见下图</text>
+
+<!-- 终态节点 -->
+<rect class="node n-warn" x="70" y="478" width="180" height="64" rx="8" data-tip="已撤回：申请人无审批记录时撤回，历史实例 deleteReason=申请人撤回。"/>
+<text class="n-title" x="160" y="506" text-anchor="middle">↩ 已撤回</text>
+<text class="n-sub" x="160" y="528" text-anchor="middle">deleteReason: 申请人撤回</text>
+
+<rect class="node n-crit" x="590" y="478" width="180" height="64" rx="8" data-tip="已驳回：审批人驳回后实例被删除，已办历史任务状态显示「已退回」。"/>
+<text class="n-title" x="680" y="506" text-anchor="middle">✕ 已驳回</text>
+<text class="n-sub" x="680" y="528" text-anchor="middle">删除实例 · 历史「已退回」</text>
+
+<rect class="node n-serious" x="850" y="478" width="180" height="64" rx="8" data-tip="已删除：管理员强制清理，实例与孤儿任务一并删除。"/>
+<text class="n-title" x="940" y="506" text-anchor="middle">⊘ 已删除</text>
+<text class="n-sub" x="940" y="528" text-anchor="middle">管理员强制清理</text>
+
+<!-- 抄送 -->
+<rect class="node n-ink" x="1065" y="600" width="230" height="60" rx="8" data-tip="抄送任务：独立任务（无 execution），变量 _ccProcessInstanceId 关联原流程。<br>被抄送人 POST /task/dismiss（已阅）后删除任务及历史。"/>
+<text class="n-title" x="1180" y="626" text-anchor="middle">✉ 抄送任务 [抄送]</text>
+<text class="n-sub" x="1180" y="648" text-anchor="middle">申请人 + ccUsers · 已阅即删</text>
+
+<text class="note" x="90" y="618">· 流程结束 → 自动为申请人 + ccUsers 创建独立抄送任务（无 execution，名称 [抄送] 流程名）</text>
+<text class="note" x="90" y="636">· 被抄送人 dismiss（已阅）→ 删除任务及历史</text>
+</svg>
+<figcaption>图 1 · 审批全流程：发起 → 逐节点审批（可会签/加签）→ 结束；驳回 / 撤回 / 强制删除直接终止流程，结束后自动抄送。</figcaption>
+</figure>
+
+<!-- ══ 图 2：会签 × 加签 ══ -->
+<figure class="figure">
+<svg viewBox="0 0 1320 470" role="img" aria-label="会签与加签机制">
+<defs>
+  <marker id="ma2-good" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--good)"/></marker>
+  <marker id="ma2-aqua" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--s3)"/></marker>
+</defs>
+
+<!-- 面板：设计时会签 -->
+<rect class="lane" x="16" y="36" width="560" height="418"/>
+<text class="n-title" x="32" y="62">会签 · 设计时（多实例节点）</text>
+
+<rect class="node n-s3" x="130" y="112" width="200" height="56" rx="8" data-tip="设计时：节点 assigneeList 配置多人（&gt;1）→ ProcessBuilder 生成并行多实例 userTask。<br>assignee=${assignee}，inputDataItem=${assigneeList_节点id}。"/>
+<text class="n-mid" x="230" y="136" text-anchor="middle">会签节点</text>
+<text class="n-tiny" x="230" y="154" text-anchor="middle">assigneeList &gt; 1</text>
+
+<rect class="node n-s3" x="60" y="258" width="140" height="44" rx="8" data-tip="会签人 A：元素变量 assignee=${assignee}，发起时由注入的名单 assigneeList_* 逐个赋值。"/>
+<text class="n-mini" x="130" y="276" text-anchor="middle">审批人 A</text>
+<text class="n-tiny" x="130" y="294" text-anchor="middle">assignee=${assignee}</text>
+<rect class="node n-s3" x="230" y="258" width="140" height="44" rx="8" data-tip="会签人 B：与 A、C 并行执行（sequential=false）。"/>
+<text class="n-mini" x="300" y="276" text-anchor="middle">审批人 B</text>
+<text class="n-tiny" x="300" y="294" text-anchor="middle">并行执行</text>
+<rect class="node n-s3" x="400" y="258" width="140" height="44" rx="8" data-tip="会签人 C：名单可在部署时写死，也可用 ${deptLeader} / ${parentDeptLeader} / ${applicant} 占位，发起时解析注入。"/>
+<text class="n-mini" x="470" y="276" text-anchor="middle">审批人 C</text>
+<text class="n-tiny" x="470" y="294" text-anchor="middle">名单可含变量占位</text>
+
+<line class="edge edge-aqua" x1="230" y1="168" x2="130" y2="254" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua" x1="230" y1="168" x2="300" y2="254" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua" x1="230" y1="168" x2="470" y2="254" marker-end="url(#ma2-aqua)"/>
+<line class="hit" x1="230" y1="168" x2="470" y2="254" data-tip="发起时拆分为 N 个并行子任务，每人一个待办。"/>
+
+<rect class="node n-s3" x="180" y="356" width="240" height="48" rx="8" data-tip="完成条件：nrOfCompletedInstances == nrOfInstances —— 所有人全部通过后才合并推进。"/>
+<text class="n-mid" x="300" y="376" text-anchor="middle">全部完成才推进</text>
+<text class="n-tiny" x="300" y="394" text-anchor="middle">nrOfCompletedInstances == nrOfInstances</text>
+
+<line class="edge edge-aqua" x1="130" y1="302" x2="240" y2="352" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua" x1="300" y1="302" x2="300" y2="352" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua" x1="470" y1="302" x2="360" y2="352" marker-end="url(#ma2-aqua)"/>
+
+<line class="edge edge-good" x1="420" y1="380" x2="508" y2="380" marker-end="url(#ma2-good)"/>
+<line class="hit" x1="420" y1="380" x2="508" y2="380" data-tip="全部通过 → 推进到下一节点。"/>
+<text class="el" x="464" y="372" text-anchor="middle">推进</text>
+
+<text class="note" x="32" y="428">· 发起时 injectSignAssignees 解析 BPMN documentation「SIGN:节点id=人1,人2」</text>
+<text class="note" x="32" y="446">· ${deptLeader} / ${parentDeptLeader} / ${applicant} → 注入流程变量 assigneeList_&lt;节点id&gt;</text>
+
+<!-- 面板：运行时加签 -->
+<rect class="lane" x="600" y="36" width="704" height="418"/>
+<text class="n-title" x="616" y="62">加签 · 运行时（独立任务 + 计数变量）</text>
+
+<rect class="node n-s2" x="620" y="112" width="180" height="56" rx="8" data-tip="主任务：当前审批人 A 的任务。<br>A 可 addSign 指定他人加签（创建独立任务，parentTaskId 指向主任务）。"/>
+<text class="n-mid" x="710" y="136" text-anchor="middle">主任务 · 审批人 A</text>
+<text class="n-tiny" x="710" y="154" text-anchor="middle">当前审批任务</text>
+
+<rect class="node n-warn" x="900" y="112" width="200" height="56" rx="8" data-tip="挂起：主任务已通过但仍有加签未完成 → _mainApproved=true、_mainApprover=审批人A，主任务处理人置空等待。"/>
+<text class="n-mid" x="1000" y="136" text-anchor="middle">等待加签完成</text>
+<text class="n-tiny" x="1000" y="154" text-anchor="middle">_mainApproved=true · 处理人置空</text>
+
+<rect class="node n-good" x="1180" y="112" width="124" height="56" rx="8" data-tip="加签全部完成且主已同意 → 主任务 complete(approved=true)，流程推进。"/>
+<text class="n-mid" x="1242" y="136" text-anchor="middle">继续推进</text>
+<text class="n-tiny" x="1242" y="154" text-anchor="middle">complete</text>
+
+<rect class="node n-s3" x="620" y="258" width="180" height="44" rx="8" data-tip="加签任务：addSign(taskId, assignee) 创建的独立任务，与主任务同实例（无 execution）。<br>通过时评论「加签审批(审批人): 意见」，_signCount 递减。"/>
+<text class="n-mini" x="710" y="276" text-anchor="middle">加签任务 · 审批人 B</text>
+<text class="n-tiny" x="710" y="294" text-anchor="middle">addSign · parentTaskId=主任务</text>
+
+<rect class="node n-s3" x="900" y="258" width="180" height="44" rx="8" data-tip="可多次加签：每个加签任务独立审批，互不影响。"/>
+<text class="n-mini" x="990" y="276" text-anchor="middle">加签任务 · 审批人 C</text>
+<text class="n-tiny" x="990" y="294" text-anchor="middle">可多次加签</text>
+
+<line class="edge edge-good" x1="804" y1="140" x2="896" y2="140" marker-end="url(#ma2-good)"/>
+<line class="hit" x1="804" y1="140" x2="896" y2="140" data-tip="主任务审批通过：若自己是加签发起人（_signOwner）且 _signCount&gt;1 → 挂起等待；否则直接 complete 推进。"/>
+<text class="el" x="850" y="160" text-anchor="middle">通过 · 存在加签(_signCount&gt;1)</text>
+
+<line class="edge edge-good" x1="1104" y1="140" x2="1176" y2="140" marker-end="url(#ma2-good)"/>
+<line class="hit" x1="1104" y1="140" x2="1176" y2="140" data-tip="条件满足（_signCount≤1 且 _mainApproved）→ 主任务 complete，流程推进到下一节点。"/>
+<text class="el" x="1140" y="130" text-anchor="middle">全部加签通过</text>
+
+<line class="edge edge-aqua dot" x1="710" y1="168" x2="710" y2="254" marker-end="url(#ma2-aqua)"/>
+<line class="hit" x1="710" y1="168" x2="710" y2="254" data-tip="POST /task/addSign(taskId, assignee)：创建加签任务，_signCount++，_signOwner=主任务id。"/>
+<text class="el" x="724" y="215" text-anchor="start">addSign(assignee)</text>
+
+<line class="edge edge-aqua dot" x1="804" y1="280" x2="896" y2="280" marker-end="url(#ma2-aqua)"/>
+<line class="hit" x1="804" y1="280" x2="896" y2="280" data-tip="可继续加签更多人，计数持续累加。"/>
+<text class="el" x="850" y="270" text-anchor="middle">再次加签</text>
+
+<line class="edge edge-aqua dot" x1="804" y1="280" x2="880" y2="280" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua dot" x1="880" y1="280" x2="880" y2="140" marker-end="url(#ma2-aqua)"/>
+<line class="edge edge-aqua dot" x1="880" y1="140" x2="896" y2="140" marker-end="url(#ma2-aqua)"/>
+<line class="hit" x1="880" y1="140" x2="880" y2="280" data-tip="加签人通过：评论「加签审批(审批人): 意见」→ _signCount-- → 当 ≤1 且主已同意 → 主任务完成推进。"/>
+<text class="el" x="892" y="215" text-anchor="start">✓ 加签审批 · _signCount--</text>
+
+<rect class="node n-ink" x="616" y="376" width="190" height="30" rx="6" data-tip="_signOwner：加签发起的主任务 id，用于判断主任务审批人身份。"/>
+<text class="n-tiny" x="711" y="395" text-anchor="middle">_signOwner = 主任务id</text>
+<rect class="node n-ink" x="826" y="376" width="210" height="30" rx="6" data-tip="_signCount：剩余待完成的加签数（初始 1，每次 addSign +1，每次加签通过 -1）。"/>
+<text class="n-tiny" x="931" y="395" text-anchor="middle">_signCount = 待完成加签数</text>
+<rect class="node n-ink" x="1056" y="376" width="240" height="30" rx="6" data-tip="_mainApproved / _mainApprover：主任务是否已同意及处理人，加签全部完成后据此恢复主任务。"/>
+<text class="n-tiny" x="1176" y="395" text-anchor="middle">_mainApproved = 主任务已同意</text>
+
+<text class="note" x="616" y="430">· 主任务先通过 → 挂起；加签人全部通过(_signCount≤1)且主已同意 → 主任务 complete → 流程推进</text>
+<text class="note" x="616" y="447">· 加签审批评论：「加签审批(审批人): 意见」；两种机制独立：设计时会签=多实例，运行时加签=独立任务</text>
+</svg>
+<figcaption>图 2 · 会签与加签：左为设计时多实例会签（全部通过），右为运行时动态加签（独立任务 + 计数变量）。</figcaption>
+</figure>
+
+<!-- ══ 表：操作速查 ══ -->
+<h2><span class="no">3</span>操作速查表</h2>
+<table>
+<thead>
+<tr><th style="width:14%">操作</th><th style="width:30%">端点</th><th style="width:24%">操作者 / 条件</th><th>对流程的影响</th></tr>
+</thead>
+<tbody>
+<tr><td><span class="tag tag-aqua">发起</span></td><td class="mono">POST /instance/start</td><td class="dim">申请人</td><td>注入 applicant / deptLeader / parentDeptLeader / assigneeList_* 变量 → 启动实例，创建首个审批任务</td></tr>
+<tr><td><span class="tag tag-good">✓ 通过</span></td><td class="mono">POST /task/approve</td><td class="dim">任务处理人</td><td>记录评论 → completeTask(approved=true) → 网关判定下一节点；流程结束 → 自动创建抄送任务</td></tr>
+<tr><td><span class="tag tag-new">批量通过 ● 新增</span></td><td class="mono">POST /task/batchApprove</td><td class="dim">任务处理人</td><td>逐条调用 approve；单条失败仅记录「审批失败」，不影响其余任务，结果按入参顺序返回</td></tr>
+<tr><td><span class="tag tag-crit">✕ 驳回</span></td><td class="mono">POST /task/reject</td><td class="dim">任意审批人</td><td>记录评论 → 删除整个流程实例；已办历史状态显示「已退回」</td></tr>
+<tr><td><span class="tag tag-warn">↺ 驳回到上一步</span></td><td class="mono">POST /task/rollback</td><td class="dim">任意审批人</td><td>changeActivityStateBuilder 把当前节点移回最近已完成节点；已是首节点 → 退化为驳回</td></tr>
+<tr><td><span class="tag tag-aqua">＋ 加签</span></td><td class="mono">POST /task/addSign</td><td class="dim">当前处理人</td><td>创建独立加签任务（parentTaskId=主任务）；_signCount++、_signOwner=主任务；主任务通过后挂起等待</td></tr>
+<tr><td><span class="tag tag-aqua">≡ 会签</span></td><td class="dim">设计时 assigneeList &gt; 1</td><td class="dim">流程设计者</td><td>生成并行多实例节点，全部通过才推进（nrOfCompletedInstances == nrOfInstances）</td></tr>
+<tr><td><span class="tag tag-good">✉ 抄送已阅</span></td><td class="mono">POST /task/dismiss</td><td class="dim">被抄送人</td><td>删除抄送任务及历史记录（已阅）；抄送任务在流程结束时由系统自动创建</td></tr>
+<tr><td><span class="tag tag-warn">↩ 撤回</span></td><td class="mono">POST /instance/{id}/withdraw</td><td class="dim">申请人 · 且无审批记录</td><td>删除流程实例（deleteReason=申请人撤回）；历史「已撤回」，进入申请人已办列表</td></tr>
+<tr><td><span class="tag tag-serious">⊘ 强制删除</span></td><td class="mono">POST /task/deleteInstance</td><td class="dim">管理员</td><td>先清理加签/抄送等孤儿任务，再删除流程实例（管理员强制清理）</td></tr>
+<tr><td>待办 / 已办</td><td class="mono">GET /task/todo · /task/history</td><td class="dim">按 assignee 查询</td><td>待办含加签、抄送任务；已办含「已通过 / 已退回 / 已撤回」</td></tr>
+<tr><td>审批轨迹</td><td class="mono">GET /instance/{id}/track</td><td class="dim">—</td><td>发起 → 各节点（通过 / 驳回 / 加签通过）→ 当前待办（pending）→ 终态，过滤回退产生的中断记录</td></tr>
+<tr><td>流程定义管理</td><td class="mono">/definition/*</td><td class="dim">设计者</td><td>表格配置 ↔ BPMN 互转（deployFromTable / extractConfig）、历史版本列表、applyVersion 克隆重新部署为最新版</td></tr>
+</tbody>
+</table>
+
+<p class="foot">
+  数据来源：
+  <a href="../src/main/java/com/ruoyi/workflow/service/impl/WorkflowTaskServiceImpl.java">WorkflowTaskServiceImpl.java</a> ·
+  <a href="../src/main/java/com/ruoyi/workflow/service/impl/WorkflowInstanceServiceImpl.java">WorkflowInstanceServiceImpl.java</a> ·
+  <a href="../src/main/java/com/ruoyi/workflow/service/ProcessBuilder.java">ProcessBuilder.java</a> ·
+  <a href="../src/main/java/com/ruoyi/workflow/service/FlowableService.java">FlowableService.java</a> ·
+  <a href="../src/main/java/com/ruoyi/workflow/controller/TaskController.java">TaskController.java</a>
+</p>
+
+</div>
+
+<div id="tip" role="tooltip"></div>
+<script>
+(function () {
+  var tip = document.getElementById('tip');
+  var els = document.querySelectorAll('[data-tip]');
+  function show(e) {
+    tip.innerHTML = e.currentTarget.getAttribute('data-tip');
+    tip.style.display = 'block';
+  }
+  function move(e) {
+    var pad = 16, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = e.pageX + pad, y = e.pageY + pad;
+    if (x + w > window.innerWidth - 8) x = e.pageX - w - pad;
+    if (y + h > window.innerHeight - 8) y = e.pageY - h - pad;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  els.forEach(function (el) {
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mousemove', move);
+    el.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

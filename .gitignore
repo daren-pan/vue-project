@@ -56,4 +56,3 @@ docker/.env
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml
-.vscode/mcp.json
