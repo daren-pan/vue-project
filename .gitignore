@@ -57,3 +57,5 @@ docker/.env
 !*/build/*.html
 !*/build/*.xml
 .vscode/mcp.json
+# ZCode workspace MCP config (contains DB credentials)
+.zcode/config.json
