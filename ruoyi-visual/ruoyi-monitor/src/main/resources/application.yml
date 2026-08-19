@@ -19,9 +19,14 @@ spring:
       discovery:
         # 服务注册地址
         server-addr: ${NACOS_HOST:localhost}:8848
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_DISCOVERY_NAMESPACE:}
       config:
         # 配置中心地址
         server-addr: ${NACOS_HOST:localhost}:8848
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
         # 配置文件格式
         file-extension: yml
         # 共享配置
