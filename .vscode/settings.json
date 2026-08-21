@@ -1,14 +1,10 @@
 {
     "chat.mcp.serverSampling": {
         "RuoYi-Cloud/.vscode/mcp.json: mysql-ry": {
-            "allowedModels": [
-                "deepseek/deepseek-v4-pro"
-            ]
+            "allowedModels": ["deepseek/deepseek-v4-pro", "glm-5.2"]
         },
         "RuoYi-Cloud/.vscode/mcp.json: mysql-flowable": {
-            "allowedModels": [
-                "deepseek/deepseek-v4-pro"
-            ]
+            "allowedModels": ["deepseek/deepseek-v4-pro", "glm-5.2"]
         }
     }
 }

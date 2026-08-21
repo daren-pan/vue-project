@@ -59,7 +59,7 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
   line-height: 1.55;
 }
-.wrap { max-width: 1120px; margin: 0 auto; }
+.wrap { max-width: 1600px; margin: 0 auto; }
 h1 { font-size: 24px; margin: 0 0 6px; }
 .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 24px; }
 h2 { font-size: 16px; margin: 40px 0 12px; }
@@ -85,13 +85,18 @@ h2 .no { color: var(--ink-3); font-weight: 500; margin-right: 8px; }
   border: 1px solid var(--grid); border-radius: 8px;
   background: var(--surface-1); padding: 16px 12px 8px;
   margin-bottom: 12px;
+  overflow-x: auto;
 }
 .figure figcaption { font-size: 12px; color: var(--ink-3); padding: 4px 4px 8px; }
 svg { width: 100%; height: auto; display: block; }
+svg.min { min-width: 1100px; }
 svg text { font-family: inherit; }
 
 .lane { fill: var(--surface-1); stroke: var(--grid); stroke-width: 1; }
 .lane-lab { font-size: 12px; fill: var(--ink-3); letter-spacing: 2px; }
+.lane-hl { fill: var(--surface-1); stroke: var(--s1); stroke-width: 2; }
+.lane-hl2 { fill: var(--surface-1); stroke: var(--s3); stroke-width: 1.5; }
+.lane-hl3 { fill: var(--surface-1); stroke: var(--s2); stroke-width: 2; }
 
 .node { fill: var(--surface-1); stroke-width: 2; rx: 8; }
 .n-s1 { stroke: var(--s1); }
@@ -191,7 +196,7 @@ td.dim { color: var(--ink-2); }
 
 <!-- ══ 图 1：审批全流程 ══ -->
 <figure class="figure">
-<svg viewBox="0 0 1320 680" role="img" aria-label="审批全流程泳道图">
+<svg class="min" viewBox="0 0 1320 680" role="img" aria-label="审批全流程泳道图">
 <defs>
   <marker id="ma-ink" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-2)"/></marker>
   <marker id="ma-good" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--good)"/></marker>
@@ -212,17 +217,17 @@ td.dim { color: var(--ink-2); }
 <text class="lane-lab" x="30" y="614">抄 送（流程结束后自动）</text>
 
 <!-- 泳道 A：申请人动作 -->
-<rect class="node n-s1" x="90" y="56" width="430" height="44" rx="8" data-tip="发起流程：传入 processKey + applicant + 业务变量。<br>服务端注入 applicant、deptLeader、parentDeptLeader 及会签名单 assigneeList_*，随后 startProcessInstanceByKey 启动实例，创建首个审批任务。"/>
-<text class="n-mid" x="305" y="74" text-anchor="middle">▶ 发起申请 — POST /instance/start</text>
-<text class="n-tiny" x="305" y="90" text-anchor="middle">processKey · applicant · 业务变量</text>
+<rect class="node n-s1" x="90" y="56" width="430" height="44" rx="8" data-tip="发起流程：传入 processKey + applicant + 业务变量。<br>服务端注入 applicant、deptLeader、parentDeptLeader 及会签名单 assigneeList_*，随后 startProcessInstanceByKey 启动实例，创建首个审批任务。<br>（与下方主流程首节点「发起申请」为同一操作，此处为申请人操作入口视角）"/>
+<text class="n-mid" x="305" y="74" text-anchor="middle">▶ 发起申请（入口）</text>
+<text class="n-tiny" x="305" y="90" text-anchor="middle">POST /instance/start</text>
 <rect class="node n-warn" x="560" y="56" width="480" height="44" rx="8" data-tip="撤回：仅申请人本人可操作，且流程必须尚无任何审批记录（无已完成任务）。<br>执行后删除流程实例，历史标记「已撤回」并出现在申请人已办列表。"/>
 <text class="n-mid" x="800" y="74" text-anchor="middle">↩ 撤回 — POST /instance/{id}/withdraw</text>
 <text class="n-tiny" x="800" y="90" text-anchor="middle">仅申请人 · 且尚无审批记录</text>
 
 <!-- 主流程节点 -->
-<rect class="node n-s1" x="70" y="268" width="180" height="64" rx="8" data-tip="发起申请：申请人填写表单并提交。系统通过 RemoteUserService 解析审批链（deptLeader / parentDeptLeader，失败兜底 admin）。"/>
+<rect class="node n-s1" x="70" y="268" width="180" height="64" rx="8" data-tip="发起申请：申请人填写表单并提交。系统通过 RemoteUserService 解析审批链（deptLeader / parentDeptLeader，失败兜底 admin）。<br>流程起点节点（与顶部申请人泳道「发起申请（入口）」为同一操作）。"/>
 <text class="n-title" x="160" y="296" text-anchor="middle">发起申请</text>
-<text class="n-sub" x="160" y="318" text-anchor="middle">申请人 · 注入审批链变量</text>
+<text class="n-sub" x="160" y="318" text-anchor="middle">流程起点 · 申请人 · 注入审批链</text>
 
 <rect class="node n-s2" x="330" y="268" width="180" height="64" rx="8" data-tip="审批节点 A：处理人 approve 后任务完成，携带 approved=true 由 exclusiveGateway 判断条件分支（如 ${days gt 3}）。"/>
 <text class="n-title" x="420" y="296" text-anchor="middle">审批节点 A</text>
@@ -307,7 +312,7 @@ td.dim { color: var(--ink-2); }
 
 <!-- ══ 图 2：会签 × 加签 ══ -->
 <figure class="figure">
-<svg viewBox="0 0 1320 470" role="img" aria-label="会签与加签机制">
+<svg class="min" viewBox="0 0 1320 470" role="img" aria-label="会签与加签机制">
 <defs>
   <marker id="ma2-good" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--good)"/></marker>
   <marker id="ma2-aqua" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--s3)"/></marker>
@@ -430,6 +435,172 @@ td.dim { color: var(--ink-2); }
 <tr><td>待办 / 已办</td><td class="mono">GET /task/todo · /task/history</td><td class="dim">按 assignee 查询</td><td>待办含加签、抄送任务；已办含「已通过 / 已退回 / 已撤回」</td></tr>
 <tr><td>审批轨迹</td><td class="mono">GET /instance/{id}/track</td><td class="dim">—</td><td>发起 → 各节点（通过 / 驳回 / 加签通过）→ 当前待办（pending）→ 终态，过滤回退产生的中断记录</td></tr>
 <tr><td>流程定义管理</td><td class="mono">/definition/*</td><td class="dim">设计者</td><td>表格配置 ↔ BPMN 互转（deployFromTable / extractConfig）、历史版本列表、applyVersion 克隆重新部署为最新版</td></tr>
+</tbody>
+</table>
+
+<!-- ══ 图 3：流程定义设计 ══ -->
+<h2><span class="no">4</span>流程定义设计（表格配置 → BPMN）</h2>
+<figure class="figure">
+<svg class="min" viewBox="0 0 1320 560" role="img" aria-label="流程定义设计图">
+<defs>
+  <marker id="ma3-ink" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-2)"/></marker>
+  <marker id="ma3-aqua" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--s3)"/></marker>
+  <marker id="ma3-good" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--good)"/></marker>
+</defs>
+
+<!-- 泳道 1：表格配置（节点图 + 连线图） -->
+<rect class="lane-hl" x="16" y="36" width="1288" height="150"/>
+<text class="lane-lab" x="30" y="58">表 格 配 置（表格设计流程）</text>
+
+<!-- 子面板 A：节点图 -->
+<rect class="lane-hl2" x="60" y="74" width="590" height="98"/>
+<text class="n-title" x="76" y="94">节点图 nodes[]</text>
+<rect class="node n-s3" x="76" y="104" width="220" height="30" rx="6" data-tip="每行定义一个节点：id（唯一标识）、name（显示名）、type（类型）。"/>
+<text class="n-tiny" x="186" y="123" text-anchor="middle">id · name · type</text>
+<rect class="node n-s3" x="316" y="104" width="180" height="30" rx="6" data-tip="审批人配置：type=userTask 时填 assignee（单人）或 assigneeList（会签多人）。"/>
+<text class="n-tiny" x="406" y="123" text-anchor="middle">assignee / assigneeList</text>
+<text class="note" x="76" y="158">操作：逐行加节点 → 选 type（startEvent/userTask/exclusiveGateway/endEvent）</text>
+
+<!-- 子面板 B：连线图 -->
+<rect class="lane-hl2" x="676" y="74" width="590" height="98"/>
+<text class="n-title" x="692" y="94">连线图 lines[]</text>
+<rect class="node n-s2" x="692" y="104" width="200" height="30" rx="6" data-tip="每条连线定义：from（起点节点 id）→ to（终点节点 id）。"/>
+<text class="n-tiny" x="792" y="123" text-anchor="middle">from → to</text>
+<rect class="node n-s2" x="912" y="104" width="200" height="30" rx="6" data-tip="网关分支可选 condition（条件表达式，如 days &gt; 3）。"/>
+<text class="n-tiny" x="1012" y="123" text-anchor="middle">condition（可选）</text>
+<text class="note" x="692" y="158">操作：选择 from/to 节点 → 网关出边填条件表达式 → 连成完整流向</text>
+
+<!-- 泳道 2：会签 / 加签 / 抄送 说明 -->
+<rect class="lane-hl3" x="16" y="202" width="1288" height="132"/>
+<text class="lane-lab" x="30" y="224">会 签 · 加 签 · 抄 送</text>
+
+<rect class="node n-s3" x="70" y="240" width="380" height="76" rx="8" data-tip="会签（设计时）：节点 assigneeList 填 &gt;1 人 → 生成并行多实例节点。<br>发起时拆分为 N 个并行子任务，全部通过（nrOfCompletedInstances==nrOfInstances）才推进；1 人退化为普通节点。"/>
+<text class="n-title" x="260" y="262" text-anchor="middle">≡ 会签 · 设计时配置</text>
+<text class="n-sub" x="260" y="284" text-anchor="middle">assigneeList &gt; 1 → 并行多实例 · 全部通过才推进</text>
+<text class="n-tiny" x="260" y="302" text-anchor="middle">=1 人退化为普通节点</text>
+
+<rect class="node n-warn" x="470" y="240" width="380" height="76" rx="8" data-tip="加签（运行时）：当前处理人 addSign 动态指定他人。<br>创建独立加签任务（parentTaskId=主任务），_signCount 计数；主任务先通过则挂起，加签全部完成后恢复推进。"/>
+<text class="n-title" x="660" y="262" text-anchor="middle">＋ 加签 · 运行时动态</text>
+<text class="n-sub" x="660" y="284" text-anchor="middle">addSign 创建独立任务 · _signCount 计数</text>
+<text class="n-tiny" x="660" y="302" text-anchor="middle">主任务通过后挂起，加签完再推进</text>
+
+<rect class="node n-ink" x="870" y="240" width="380" height="76" rx="8" data-tip="抄送（流程配置）：ccUsers 填被抄送人列表。<br>流程结束后系统自动创建独立抄送任务（[抄送] 流程名），被抄送人 dismiss（已阅）后删除任务及历史。"/>
+<text class="n-title" x="1060" y="262" text-anchor="middle">✉ 抄送 · 流程配置</text>
+<text class="n-sub" x="1060" y="284" text-anchor="middle">ccUsers 填列表 · 结束后自动创建抄送任务</text>
+<text class="n-tiny" x="1060" y="302" text-anchor="middle">已阅即删（dismiss）</text>
+
+<!-- 泳道 1 → 泳道 2 大箭头 -->
+<line class="edge edge-aqua" x1="660" y1="186" x2="660" y2="236" marker-end="url(#ma3-aqua)"/>
+<line class="hit" x1="660" y1="186" x2="660" y2="236" data-tip="表格配置确定流程骨架，会签/加签/抄送决定审批协作方式。"/>
+<text class="el" x="672" y="214" text-anchor="start">协作方式</text>
+
+<!-- 泳道 3：构建转换 → BPMN -->
+<rect class="lane-hl" x="16" y="350" width="1288" height="120"/>
+<text class="lane-lab" x="30" y="372">构 建 转 换（ProcessBuilder → BPMN 图）</text>
+
+<rect class="node n-s1" x="70" y="392" width="200" height="64" rx="8" data-tip="构建起点：ProcessBuilder.deployFromConfig 接收表格配置。"/>
+<text class="n-title" x="170" y="420" text-anchor="middle">读取表格配置</text>
+<text class="n-sub" x="170" y="442" text-anchor="middle">deployFromConfig</text>
+
+<rect class="node n-s2" x="320" y="392" width="200" height="64" rx="8" data-tip="节点/连线转换为 BPMN 元素：startEvent / userTask / userTaskMulti / exclusiveGateway / endEvent + flow 连线。"/>
+<text class="n-title" x="420" y="420" text-anchor="middle">生成 BPMN 元素</text>
+<text class="n-sub" x="420" y="442" text-anchor="middle">节点 + 连线 → BPMN XML</text>
+
+<rect class="node n-warn" x="570" y="392" width="200" height="64" rx="8" data-tip="将会签名单（SIGN:节点id=人）与抄送（CC:人）写入流程级 documentation 段。"/>
+<text class="n-title" x="670" y="420" text-anchor="middle">写入 CC/SIGN 文档</text>
+<text class="n-sub" x="670" y="442" text-anchor="middle">会签 · 抄送元数据</text>
+
+<rect class="node n-ink" x="820" y="392" width="200" height="64" rx="8" data-tip="部署到 Flowable 仓库：生成流程定义与部署记录。"/>
+<text class="n-title" x="920" y="420" text-anchor="middle">部署 deploy</text>
+<text class="n-sub" x="920" y="442" text-anchor="middle">发布为最新版本</text>
+
+<rect class="node n-good" x="1070" y="392" width="200" height="64" rx="8" data-tip="构建完成：BPMN 图已可预览 / 用于发起流程实例。"/>
+<text class="n-title" x="1170" y="420" text-anchor="middle">BPMN 流程定义</text>
+<text class="n-sub" x="1170" y="442" text-anchor="middle">可发起实例</text>
+
+<line class="edge edge-aqua" x1="270" y1="424" x2="316" y2="424" marker-end="url(#ma3-aqua)"/>
+<line class="hit" x1="270" y1="424" x2="316" y2="424" data-tip="读取配置逐项构建。"/>
+<text class="el" x="293" y="414" text-anchor="middle">读</text>
+
+<line class="edge edge-aqua" x1="520" y1="424" x2="566" y2="424" marker-end="url(#ma3-aqua)"/>
+<line class="hit" x1="520" y1="424" x2="566" y2="424" data-tip="元素 + 连线拼成 BPMN。"/>
+<text class="el" x="543" y="414" text-anchor="middle">拼</text>
+
+<line class="edge edge-aqua" x1="770" y1="424" x2="816" y2="424" marker-end="url(#ma3-aqua)"/>
+<line class="hit" x1="770" y1="424" x2="816" y2="424" data-tip="附上协作元数据。"/>
+<text class="el" x="793" y="414" text-anchor="middle">附</text>
+
+<line class="edge edge-good" x1="1020" y1="424" x2="1066" y2="424" marker-end="url(#ma3-good)"/>
+<line class="hit" x1="1020" y1="424" x2="1066" y2="424" data-tip="发布后可供发起。"/>
+<text class="el" x="1043" y="414" text-anchor="middle">发</text>
+
+<!-- 泳道 2 → 泳道 3 大箭头 -->
+<line class="edge edge-aqua" x1="660" y1="316" x2="660" y2="388" marker-end="url(#ma3-aqua)"/>
+<line class="hit" x1="660" y1="316" x2="660" y2="388" data-tip="表格配置（含协作方式）整体交给 ProcessBuilder 构建 BPMN 图。"/>
+<text class="el" x="672" y="356" text-anchor="start">构建 BPMN</text>
+
+<!-- 泳道 4：部署产物 -->
+<rect class="lane-hl2" x="16" y="486" width="1288" height="60"/>
+<text class="lane-lab" x="30" y="508">部 署 产 物</text>
+
+<rect class="node n-good" x="60" y="494" width="230" height="44" rx="8" data-tip="BPMN XML：完整流程定义文件，含所有节点/连线/条件/文档段，是流程的"源代码"。"/>
+<text class="n-mini" x="175" y="512" text-anchor="middle">BPMN XML</text>
+<text class="n-tiny" x="175" y="530" text-anchor="middle">流程定义"源代码"</text>
+
+<rect class="node n-good" x="310" y="494" width="230" height="44" rx="8" data-tip="部署记录 deploymentId：一次部署的唯一标识，可定位部署的 BPMN 文件与时间。"/>
+<text class="n-mini" x="425" y="512" text-anchor="middle">deploymentId</text>
+<text class="n-tiny" x="425" y="530" text-anchor="middle">部署记录标识</text>
+
+<rect class="node n-good" x="560" y="494" width="230" height="44" rx="8" data-tip="流程定义（key + version）：processDefinitionId = key:version，发起时按 key 定位；每次部署 version+1。"/>
+<text class="n-mini" x="675" y="512" text-anchor="middle">流程定义 key:version</text>
+<text class="n-tiny" x="675" y="530" text-anchor="middle">发起定位 · 版本递增</text>
+
+<rect class="node n-good" x="810" y="494" width="230" height="44" rx="8" data-tip="流程图 image：生成的 BPMN 图形（SVG/PNG），用于设计预览与审批轨迹展示。"/>
+<text class="n-mini" x="925" y="512" text-anchor="middle">流程图 image</text>
+<text class="n-tiny" x="925" y="530" text-anchor="middle">图形预览 · 轨迹展示</text>
+
+<rect class="node n-warn" x="1060" y="494" width="200" height="44" rx="8" data-tip="反向 extractConfig 把 BPMN 反解析回表格；applyVersion 克隆旧版本重新部署。"/>
+<text class="n-mini" x="1160" y="512" text-anchor="middle">↺ 反向编辑</text>
+<text class="n-tiny" x="1160" y="530" text-anchor="middle">extractConfig · applyVersion</text>
+
+<line class="edge edge-good" x1="1170" y1="456" x2="1160" y2="490" marker-end="url(#ma3-good)"/>
+<line class="hit" x1="1170" y1="456" x2="1160" y2="490" data-tip="部署完成后产生上述产物。"/>
+<text class="el" x="1182" y="476" text-anchor="start">产物</text>
+
+</svg>
+<figcaption>图 3 · 流程定义设计：表格配置（节点图/连线图）→ 会签·加签·抄送协作 → ProcessBuilder 构建 BPMN → 部署产物及其用途。</figcaption>
+</figure>
+
+<h2><span class="no">5</span>节点类型与连线说明</h2>
+<table>
+<thead>
+<tr><th style="width:16%">配置字段</th><th style="width:20%">取值 / 类型</th><th>作用与生成规则</th></tr>
+</thead>
+<tbody>
+<tr><td><span class="tag tag-new">processKey</span></td><td class="mono">String</td><td>流程唯一标识（如 leave），BPMN process id 与部署 key</td></tr>
+<tr><td><span class="tag tag-new">processName</span></td><td class="mono">String</td><td>流程名称（如 请假审批），BPMN process name</td></tr>
+<tr><td><span class="tag tag-aqua">node.id</span></td><td class="mono">String</td><td>节点唯一标识（如 managerApprove）</td></tr>
+<tr><td><span class="tag tag-aqua">node.type</span></td><td class="mono">startEvent · endEvent · userTask · exclusiveGateway</td><td>决定生成哪种 BPMN 元素；userTask 是唯一可配置审批人的类型</td></tr>
+<tr><td><span class="tag tag-aqua">node.assignee</span></td><td class="mono">String</td><td>单人审批人，支持变量 ${manager} / ${deptLeader} 等，发起时解析注入</td></tr>
+<tr><td><span class="tag tag-aqua">node.assigneeList</span></td><td class="mono">List&lt;String&gt;</td><td>会签名单：&gt;1 人生成并行多实例（userTaskMulti），=1 人退化为普通 userTask；写入 SIGN: 文档供发起注入</td></tr>
+<tr><td><span class="tag tag-serious">line.from</span></td><td class="mono">String</td><td>连线起点节点 id</td></tr>
+<tr><td><span class="tag tag-serious">line.to</span></td><td class="mono">String</td><td>连线终点节点 id</td></tr>
+<tr><td><span class="tag tag-serious">line.condition</span></td><td class="mono">String（可选）</td><td>条件表达式（如 days &gt; 3），排他网关分支据此判定走向</td></tr>
+<tr><td><span class="tag tag-good">ccUsers</span></td><td class="mono">List&lt;String&gt;</td><td>抄送人列表，流程结束自动通知；写入 CC: 文档段</td></tr>
+</tbody>
+</table>
+
+<h2><span class="no">6</span>设计规范说明</h2>
+<table>
+<thead>
+<tr><th style="width:26%">要点</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td>表格 ↔ BPMN 双向转换</td><td><span class="mono">deployFromTable</span>（表格 → BPMN 部署）与 <span class="mono">extractConfig</span>（BPMN → 表格）互逆，前端以表格形式设计、后端落为 BPMN 定义</td></tr>
+<tr><td>会签两种来源</td><td>设计时通过 assigneeList 配置（BPMN 多实例节点）与运行时 addSign 动态加签（独立任务）是两套独立机制</td></tr>
+<tr><td>审批人占位符</td><td>发起时解析 <span class="mono">${applicant} / ${deptLeader} / ${parentDeptLeader}</span> 注入为流程变量 assigneeList_*；RemoteUserService 解析失败兜底 admin</td></tr>
+<tr><td>版本管理</td><td>每次部署生成新版本；applyVersion 克隆旧版本配置重新部署为最新版，历史版本可查可回退</td></tr>
+<tr><td>documentation 段</td><td>BPMN 流程级 documentation 以 <span class="mono">CC:</span>（抄送）与 <span class="mono">SIGN:</span>（会签名单）前缀存元数据，发起时解析</td></tr>
 </tbody>
 </table>
 

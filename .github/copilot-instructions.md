@@ -89,13 +89,3 @@ config/            — 配置类
 
 ---
 
-## 工作流模块（ruoyi-workflow）专项规范
-
-以下为工作流模块特有的规范，通用规范见上方。
-
-### 编译命令
-
-```
-mvn compile -pl ruoyi-modules/ruoyi-workflow -am -q 2>&1
-```
-
