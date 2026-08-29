@@ -62,3 +62,6 @@ docker/.env
 
 # WorkBuddy project data (memory, logs, etc.)
 .workbuddy/
+
+# Local mockito mock-maker config (not committed)
+**/mockito-extensions/org.mockito.plugins.MockMaker

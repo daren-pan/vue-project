@@ -66,4 +66,12 @@ public class ProcessInstanceController extends BaseController {
     public R<TaskResult> withdraw(@PathVariable String processInstanceId) {
         return R.<TaskResult>ok(workflowInstanceService.withdrawProcess(processInstanceId));
     }
+
+    /**
+     * 系统自动通过 —— 按单据（流程实例）ID 自动通过当前节点，推进到下一节点，无需审批人手动操作
+     */
+    @PostMapping("/{processInstanceId}/auto-advance")
+    public R<TaskResult> autoAdvance(@PathVariable String processInstanceId) {
+        return R.<TaskResult>ok(workflowInstanceService.autoAdvance(processInstanceId));
+    }
 }

@@ -8,6 +8,7 @@ import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.workflow.domain.vo.*;
 import com.ruoyi.workflow.service.FlowableService;
 import com.ruoyi.workflow.service.IWorkflowInstanceService;
+import com.ruoyi.workflow.service.IWorkflowTaskService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.task.Comment;
@@ -34,6 +35,9 @@ public class WorkflowInstanceServiceImpl implements IWorkflowInstanceService {
 
     @Autowired(required = false)
     private RemoteUserService remoteUserService;
+
+    @Autowired
+    private IWorkflowTaskService workflowTaskService;
 
     @Override
     public TaskResult startProcess(String processKey, String applicant, Map<String, Object> body) {
@@ -68,6 +72,45 @@ public class WorkflowInstanceServiceImpl implements IWorkflowInstanceService {
         TaskResult r = new TaskResult();
         r.setProcessInstanceId(processInstanceId);
         r.setAction("撤回");
+        return r;
+    }
+
+    @Override
+    public TaskResult autoAdvance(String processInstanceId) {
+        // 1. 校验流程实例必须是运行中
+        ProcessInstance instance = flowableService.getProcessInstance(processInstanceId);
+        if (instance == null) {
+            var hi = flowableService.getHistoricProcessInstance(processInstanceId);
+            if (hi != null) {
+                throw new WorkflowException("流程「" + processInstanceId + "」已结束，无法自动推进");
+            }
+            throw new WorkflowException("流程实例「" + processInstanceId + "」不存在");
+        }
+        // 2. 校验当前节点有待办任务
+        List<Task> activeTasks = flowableService.listTasksByInstance(processInstanceId);
+        if (activeTasks == null || activeTasks.isEmpty()) {
+            throw new WorkflowException("流程「" + processInstanceId + "」当前节点无待办任务，无法自动推进");
+        }
+        // 3. 逐个自动通过当前节点任务（复用加签/会签推进逻辑，已处理任务跳过）
+        boolean advanced = false;
+        for (Task task : activeTasks) {
+            try {
+                workflowTaskService.approve(task.getId(), "系统自动通过");
+                advanced = true;
+            } catch (WorkflowException e) {
+                // 任务已被处理（如会签主任务已由子任务完成触发），跳过并继续
+            }
+        }
+        if (!advanced) {
+            throw new WorkflowException("流程「" + processInstanceId + "」当前节点未发现可自动通过的任务");
+        }
+        // 4. 计算流程是否已结束，构造返回结果
+        boolean done = flowableService.getProcessInstance(processInstanceId) == null;
+        TaskResult r = new TaskResult();
+        r.setProcessInstanceId(processInstanceId);
+        r.setAction("自动通过");
+        r.setTip(done ? "流程已自动推进至结束" : "已自动通过当前节点，流程已推进到下一节点");
+        r.setProcessFinished(done);
         return r;
     }
 

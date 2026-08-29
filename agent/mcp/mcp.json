@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.modelcontextprotocol.io/2025-03-26/server.json",
+  "servers": {
+    "mysql-ry": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mysql-mcp-server"],
+      "env": {
+        "MYSQL_HOST": "localhost",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "password",
+        "MYSQL_DATABASE": "ry-cloud"
+      }
+    },
+    "mysql-flowable": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mysql-mcp-server"],
+      "env": {
+        "MYSQL_HOST": "localhost",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "password",
+        "MYSQL_DATABASE": "ry-flowable"
+      }
+    }
+  },
+  "inputs": []
+}
