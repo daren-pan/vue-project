@@ -12,6 +12,8 @@ public class TaskVO {
 
     /** 任务ID */
     private String taskId;
+    /** 审批人/处理人 */
+    private String assignee;
     /** 任务名称 */
     private String taskName;
     /** 流程实例ID */
@@ -35,6 +37,8 @@ public class TaskVO {
 
     public String getTaskId() { return taskId; }
     public void setTaskId(String taskId) { this.taskId = taskId; }
+    public String getAssignee() { return assignee; }
+    public void setAssignee(String assignee) { this.assignee = assignee; }
     public String getTaskName() { return taskName; }
     public void setTaskName(String taskName) { this.taskName = taskName; }
     public String getProcessInstanceId() { return processInstanceId; }
