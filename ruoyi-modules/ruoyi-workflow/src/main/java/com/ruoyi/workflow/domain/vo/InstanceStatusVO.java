@@ -12,6 +12,8 @@ public class InstanceStatusVO {
 
     /** 流程实例ID */
     private String processInstanceId;
+    /** 关联业务单据 key */
+    private String businessKey;
     /** 运行中 / 已结束 / 不存在 */
     private String status;
     /** 当前活动节点（运行中） */
@@ -25,6 +27,8 @@ public class InstanceStatusVO {
 
     public String getProcessInstanceId() { return processInstanceId; }
     public void setProcessInstanceId(String processInstanceId) { this.processInstanceId = processInstanceId; }
+    public String getBusinessKey() { return businessKey; }
+    public void setBusinessKey(String businessKey) { this.businessKey = businessKey; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getActivityId() { return activityId; }
