@@ -179,7 +179,7 @@ private String phonenumber;   // 138****1234
 | 第三方密钥 | 统一放配置中心，禁止提交仓库 |
 
 - **禁止硬编码**：任何密钥不得进入提交的代码/配置；CI 增加密钥扫描（`gitleaks`）门禁。
-- Agent 与成员不得将密钥回显到日志或外部工具（见 [AGENTS.md](../../AGENTS.md) 第 8 节）。
+- Agent 与成员不得将密钥回显到日志或外部工具（见 [AGENTS.md](../../AGENTS.md) §1）。
 
 ---
 

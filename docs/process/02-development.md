@@ -39,12 +39,12 @@ docker compose -f docker/docker-compose.yml up -d nacos mysql redis minio sentin
 
 ### 2.3 本地配置
 
-- 敏感项（数据库密码、JWT 密钥、Nacos 账号）用环境变量占位，写入 **`local-env.yml`**（已 gitignore），**禁止硬编码进提交**（[AGENTS.md](../../AGENTS.md) §8）。
+- 敏感项（数据库密码、JWT 密钥、Nacos 账号）用环境变量占位，写入 **`local-env.yml`**（已 gitignore），**禁止硬编码进提交**（[AGENTS.md](../../AGENTS.md) §1）。
 - 服务启动同时 `import optional:nacos:...` 与 `optional:file:./local-env.yml`，保证本地缺省可运行。
 
 ---
 
-## 3. 开发规范（摘要，完整见 AGENTS.md §4）
+## 3. 开发规范（摘要，完整见 [../modules/coding-standard.md](../modules/coding-standard.md)）
 
 ### 3.1 分层与职责
 
@@ -74,7 +74,7 @@ mapper/       — MyBatis Mapper 接口；config/ — 配置类
 
 ## 4. 编译验证流程（硬性规则）
 
-> 每次修改 `.java` 后**必须立即**编译，失败即修复直到通过（[AGENTS.md](../../AGENTS.md) §1.1）。
+> 每次修改 `.java` 后**必须立即**编译，失败即修复直到通过（[AGENTS.md](../../AGENTS.md) §1）。
 
 ```bash
 # 单模块编译
@@ -114,7 +114,7 @@ npm run lint       # ESLint 校验（.vue/.js/.ts）
 npm run build      # 生产构建，有错即修
 ```
 
-> 修改 `.vue`/`.js`/`.ts` 后执行 `npm run lint` 与 `npm run build`，全部通过才能提交（[AGENTS.md](../../AGENTS.md) §1.2）。
+> 修改 `.vue`/`.js`/`.ts` 后执行 `npm run lint` 与 `npm run build`，全部通过才能提交（[AGENTS.md](../../AGENTS.md) §1）。
 
 ---
 
@@ -143,6 +143,8 @@ git checkout -b feature/<ticket>-<desc>   # 或 bugfix/<ticket>-<desc>
 git add <files>
 git commit -m "feat(system): 新增用户审批功能，含单测与迁移脚本"
 ```
+
+> 建完分支后先 `git branch --show-current` 并把当前分支名显示给用户（如 `✔ feature/123-user-login`），确认无误后再提交（[workflow-management](workflow-management.md) §0.1）。
 
 | type | 场景 |
 |------|------|
@@ -174,7 +176,7 @@ git commit -m "feat(system): 新增用户审批功能，含单测与迁移脚本
 
 ## 10. 文档 / 配置 / SQL 同步
 
-- **文档**：新增/修改模块或接口时，同步更新 `docs/modules/<module>.md` 与 `docs/architecture/` 关联图（[AGENTS.md](../../AGENTS.md) §7）。
+- **文档**：新增/修改模块或接口时，同步更新 `docs/modules/<module>.md` 与 `docs/architecture/` 关联图（[AGENTS.md](../../AGENTS.md) §2.4；维护规则见 [../modules/README.md](../modules/README.md)）。
 - **配置**：改动配置先改 `config/<service>-<profile>.yml` 模板，确认 `NACOS_DATA_ID` 与 `spring.application.name` 一致后再同步到 Nacos。
 - **SQL**：表结构变更产出 `sql/<version>__<desc>.sql`（只向前迁移），语法先经 MCP 或 MySQL 客户端校验再入库。
 

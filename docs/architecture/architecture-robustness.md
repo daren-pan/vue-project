@@ -36,7 +36,7 @@
 - 幂等键全局唯一（UUID / 时间戳 + 随机数 / 业务单号），不可由前端任意指定后复用。
 - 幂等判断与业务写入**必须同库同事务**，避免「判重后未写入」窗口。
 - 幂等表按业务分表（`sys_idempotent_<biz>`），定期清理过期记录。
-- 涉及金钱/库存/状态机流转的更新一律使用**版本号乐观锁**（见 [AGENTS.md](../../AGENTS.md) 4.6）。
+- 涉及金钱/库存/状态机流转的更新一律使用**版本号乐观锁**（见 [../modules/coding-standard.md](../modules/coding-standard.md) §5）。
 
 ```sql
 UPDATE biz_order SET status = 2, version = version + 1
@@ -129,7 +129,7 @@ System(事务发起) ──AT──► Workflow(审批创建) ──AT──► 
 
 ### 7.1 异常体系
 
-- 业务异常**禁止裸 `RuntimeException`**，统一使用 `ServiceException`（见 [AGENTS.md](../../AGENTS.md) 4.5）。
+- 业务异常**禁止裸 `RuntimeException`**，统一使用 `ServiceException`（见 [../modules/coding-standard.md](../modules/coding-standard.md) §4）。
 - 模块专用异常放 `ruoyi-common-core` 的 `exception/` 包，并在 `GlobalExceptionHandler` 注册对应 `@ExceptionHandler`。
 - 全局处理链：`ServiceException` → 参数校验异常 → 权限/认证异常 → 数据访问异常 → 兜底 `Exception`（不向客户端泄漏堆栈与内部信息）。
 

@@ -74,7 +74,7 @@ scrape_configs:
 
 - 每行 JSON 结构：`时间戳 | traceId | 服务名 | 级别 | 线程 | 类 | 消息`。
 - **traceId 贯穿全链路**：网关生成 `X-Trace-Id`，经 Feign/日志 MDC 透传，故障时按 traceId 串联调用链。
-- 禁止打印敏感信息（密码/令牌/身份证等，见 AGENTS.md §8）；脱敏走 `ruoyi-common-sensitive`。
+- 禁止打印敏感信息（密码/令牌/身份证等，见 [AGENTS.md](../../AGENTS.md) §1）；脱敏走 `ruoyi-common-sensitive`。
 
 ```xml
 <!-- logback-spring.xml 片段 -->

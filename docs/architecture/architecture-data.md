@@ -25,7 +25,7 @@
 | ruoyi-file | `ry-cloud`（元数据） + MinIO | 文件内容在对象存储 |
 | 新增业务模块 | `ry-<module>` | 独立库，见 [扩展性设计](architecture-scalability.md) §11 |
 
-> 库名、连接信息以 [agent/mcp/mcp.json](../../agent/mcp/mcp.json) 为准（`mysql-ry` / `mysql-flowable`，查询一律只读，见 [AGENTS.md](../../AGENTS.md) 第 3 节）。
+> 库名、连接信息以 [agent/mcp/mcp.json](../../agent/mcp/mcp.json) 为准（`mysql-ry` / `mysql-flowable`，查询一律只读，见 [AGENTS.md](../../AGENTS.md) §1）。
 
 ### 2.2 拆库原则
 
@@ -54,7 +54,7 @@
 - 字符集统一 `utf8mb4`，排序规则 `utf8mb4_general_ci`（表情/生僻字安全）。
 - 金额用 `decimal(18,2)`（或 `decimal(18,4)` 中间计算），**禁止 float/double**；数量用 `int unsigned`。
 - 时间统一 `datetime`（UTC+8），禁止字符串存时间；状态用 `tinyint/char` + 注释或字典，禁止魔法数字。
-- 每张表必须有 `COMMENT` 注释；字段必须有注释（与 DTO 注释对应，见 [AGENTS.md](../../AGENTS.md) 4.3）。
+- 每张表必须有 `COMMENT` 注释；字段必须有注释（与 DTO 注释对应，见 [../modules/coding-standard.md](../modules/coding-standard.md) §3）。
 - 逻辑删除与唯一索引冲突处理：唯一索引冗余删除标记列（如 `del_flag` + 删除时间戳）或唯一键含 `del_flag`。
 
 ### 3.3 索引规范
@@ -189,7 +189,7 @@ bucket: ruoyi
 | 迁移 | 结构变更走 `sql/` 迁移脚本（向前兼容）；数据迁移写一次性脚本 + 校验对账 |
 | 回滚 | 发布前快照，回滚用「反向脚本」或「恢复快照」，禁止手动改生产数据 |
 
-> 备份与告警落地见 `docs/ops/` 运维文档；MCP 查询遵守只读红线（[AGENTS.md](../../AGENTS.md) 第 3 节）。
+> 备份与告警落地见 `docs/ops/` 运维文档；MCP 查询遵守只读红线（[AGENTS.md](../../AGENTS.md) §1）。
 
 ---
 

@@ -61,8 +61,8 @@ agent/
 3. 查数据   → 读 agent/mcp/README.md + 用 mysql-ry / mysql-flowable（只读）
 4. 改配置   → 读 config/<service>-<profile>.yml 模板 + local-env.yml 约定
 5. 发布运维 → 读 docs/process/04-release.md / 05-ops.md + bin/ + .github/workflows/
-6. 每次改动 → 严格按 AGENTS.md 的「原因+验证+编译/构建」流程执行并汇报
-7. 每次提交 → 追加当天需求与改动到 docs/changelog/<yyyy-MM-dd>.md（见 AGENTS.md §7）
+6. 每次改动 → 严格按 [AGENTS.md](../AGENTS.md) §1 的「原因+验证+编译/构建」流程执行并汇报
+7. 每次提交 → 追加当天需求与改动到 docs/changelog/<yyyy-MM-dd>.md（见 [AGENTS.md](../AGENTS.md) §2.4）
 ```
 
 ---

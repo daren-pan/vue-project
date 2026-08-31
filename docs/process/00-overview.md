@@ -78,7 +78,7 @@
 2. **模块文档**：`docs/modules/<module>.md`：职责、依赖、接口清单、运维要点。
 3. **配置**：`config/<service>-<profile>.yml`（Nacos 模板）与 `local-env.yml` 覆盖项。
 4. **SQL**：`sql/<version>__<desc>.sql`（向后兼容迁移）。
-5. **代码**：遵循 `AGENTS.md` 编码规范（分层/命名/注释/单元测试）。
+5. **代码**：遵循 [../modules/coding-standard.md](../modules/coding-standard.md) 编码规范（分层/命名/注释/单元测试）。
 6. **测试**：单测（JUnit5）、集成测试、契约测试、端到端（可选）。
 7. **发布**：`docs/ops/release-notes/<ver>.md` + 回滚脚本。
 8. **监控**：actuator 指标 + 日志规范 + 告警规则。

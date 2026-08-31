@@ -1,7 +1,7 @@
 # 测试阶段（Testing）
 
 > 本文档定义 **「测试策略 → 用例设计 → 测试执行 → 缺陷管理 → 回归 → Gate G3」** 阶段的规范与产出，输入来自 [02-development.md](02-development.md)（已合并的代码与测试）。
-> 关联文档：[流程总览](00-overview.md) · [安全架构](../architecture/architecture-security.md) · [AGENTS.md](../../AGENTS.md)（§6 测试要求） · [workflow-management](workflow-management.md)（CI 触发）
+> 关联文档：[流程总览](00-overview.md) · [安全架构](../architecture/architecture-security.md) · [AGENTS.md](../../AGENTS.md)（§2.2 测试阶段） · [workflow-management](workflow-management.md)（CI 触发）
 
 ---
 
@@ -131,8 +131,8 @@
 
 - **红线：禁止任何测试写入污染生产库**；测试只允许在 local/dev/test 环境写数据。
 - 测试库与开发库命名以 `sql/` 为准；造数脚本放 `sql/test-data/`，可重复执行（幂等）。
-- 从生产导出的脱敏数据用于测试时，手机号/身份证/银行卡必须按 `ruoyi-common-sensitive` 规则脱敏（[AGENTS.md](../../AGENTS.md) §4.6）。
-- 集成测试使用 `@Transactional` 回滚或独立 schema，测试结束恢复现场；数据库查询一律走 MCP 只读（[AGENTS.md](../../AGENTS.md) §3）。
+- 从生产导出的脱敏数据用于测试时，手机号/身份证/银行卡必须按 `ruoyi-common-sensitive` 规则脱敏（[../modules/coding-standard.md](../modules/coding-standard.md) §5）。
+- 集成测试使用 `@Transactional` 回滚或独立 schema，测试结束恢复现场；数据库查询一律走 MCP 只读（[AGENTS.md](../../AGENTS.md) §1）。
 
 ---
 

@@ -172,7 +172,7 @@ L1 本地缓存(Caffeine) ──► L2 Redis ──► DB
 
 > 适用：新业务域（如订单、库存）。
 
-- [ ] 目录：`ruoyi-modules/ruoyi-<name>/`，包结构 `controller/service/domain/mapper/config`（见 [AGENTS.md](../../AGENTS.md) 4.1）。
+- [ ] 目录：`ruoyi-modules/ruoyi-<name>/`，包结构 `controller/service/domain/mapper/config`（见 [../modules/coding-standard.md](../modules/coding-standard.md) §1）。
 - [ ] `pom.xml` 依赖 `ruoyi-common-core/-security/-redis/-datasource/-datascope/-log/-sensitive` + 所需 `ruoyi-api`；根 POM 注册。
 - [ ] Nacos 配置模板 `config/ruoyi-<name>-<profile>.yml`，`spring.application.name` 与 `NACOS_DATA_ID` 一致。
 - [ ] 独立数据库（`ry-<name>`）与 SQL 迁移脚本（规范见 [数据与存储设计](architecture-data.md) 第 10 节）。
@@ -188,7 +188,7 @@ L1 本地缓存(Caffeine) ──► L2 Redis ──► DB
 2. **骨架**：按 §11.2 创建模块目录与 `pom.xml`，注册到父 POM。
 3. **配置**：编写 Nacos 配置模板 + `local-env.yml` 覆盖项；确认服务名与配置 DataId 一致。
 4. **数据库**：创建独立库，编写版本化迁移脚本并校验语法（`sql/` 规范）。
-5. **编码**：按 [AGENTS.md](../../AGENTS.md) 分层规范实现 controller/service/mapper；入参校验、权限注解、`@Log`、幂等默认开启。
+5. **编码**：按 [../modules/coding-standard.md](../modules/coding-standard.md) 分层规范实现 controller/service/mapper；入参校验、权限注解、`@Log`、幂等默认开启。
 6. **契约**：需要跨服务的接口进 `ruoyi-api`，Feign 配置超时/重试/降级（见 [健壮性设计](architecture-robustness.md)）。
 7. **自测**：`mvn compile -pl ruoyi-modules/ruoyi-<name> -am -q` 编译通过；补单测（JUnit5 + Mockito）。
 8. **文档**：模块文档 + 设计文档 + 更新 README/架构总览索引。

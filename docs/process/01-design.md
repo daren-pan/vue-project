@@ -90,7 +90,7 @@ AND   点击任务可进入办理页
 | 30xxx | file 模块业务码 | `30401 文件不存在` |
 | 40xxx | job 模块业务码 | `40401 任务已被占用` |
 
-> 规则：业务码在设计中登记到模块文档的「错误码表」，禁止重复、禁止裸 `RuntimeException`（用 `ServiceException`，见 [AGENTS.md](../../AGENTS.md) §4.5）。
+> 规则：业务码在设计中登记到模块文档的「错误码表」，禁止重复、禁止裸 `RuntimeException`（用 `ServiceException`，见 [../modules/coding-standard.md](../modules/coding-standard.md) §4）。
 
 ---
 
@@ -203,7 +203,7 @@ docs/design/<feature>/
 | MCP `mysql-ry` / `mysql-flowable` | 数据库设计时 | **只读**核对既有表结构、字典、索引，避免设计冲突 |
 | springdoc / OpenAPI 工具 | 契约产出时 | 校验 openapi.yaml 语法与一致性 |
 
-> 详见 [agent/README.md](../../agent/README.md) 与 [agent/mcp/README.md](../../agent/mcp/README.md)；数据访问一律只读（[AGENTS.md](../../AGENTS.md) §3）。
+> 详见 [agent/README.md](../../agent/README.md) 与 [agent/mcp/README.md](../../agent/mcp/README.md)；数据访问一律只读（[AGENTS.md](../../AGENTS.md) §1）。
 
 ---
 

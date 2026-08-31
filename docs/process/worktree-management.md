@@ -1,7 +1,7 @@
 # 工作树（Git Worktree）管理
 
-> 本文档介绍如何用 `git worktree` 在同一仓库内并行开发多个任务并保持工作树隔离，是本项目并行开发的标准姿势，与 [workflow-management.md](workflow-management.md) 的分支模型配合使用。
-> 配套：[00-overview.md](00-overview.md) §3.2 · [workflow-management.md](workflow-management.md) · [AGENTS.md](../../AGENTS.md) §5
+> 本文档介绍如何用 `git worktree` 在同一仓库内并行开发多个任务并保持工作树隔离，是**本项目并行开发必须使用的标准姿势**（配合 [workflow-management.md](workflow-management.md) §0 的强制规则）。
+> 配套：[00-overview.md](00-overview.md) §3.2 · [workflow-management.md](workflow-management.md) · [AGENTS.md](../../AGENTS.md) §2.5
 
 ---
 
@@ -56,6 +56,8 @@ git worktree list --porcelain
 | 线上热修 | `git worktree add ../dsh-hot -b hotfix/v1.2.1 main` |
 | 验证他人 PR | `git worktree add ../dsh-pr456 feature/456-xxx`（检出已有分支，勿再 checkout 到别处） |
 
+> 建完 worktree（含 `git worktree add ... -b` 新建分支）后，立即执行 `git worktree list` 确认，并把 **worktree 目录 + 分支名** 显示给用户（如 `dsh-f123 → feature/123-xxx`），确保改动落在预期分支的独立工作树上（[workflow-management](workflow-management.md) §0.1）。
+>
 > 命名建议：目录用 `dsh-<任务简写>`，与主目录 `dsh` 区分；worktree 目录**放在仓库外**（如上级目录），避免嵌套进主工作树。
 
 ---
@@ -77,7 +79,7 @@ mvn -pl ruoyi-workflow -am spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 2. **端口/配置隔离**：同机并行启动同模块时，用 `local-env.yml` 或 `--server.port` 覆盖端口（如 system 9201/9211），Nacos 注册名相同但实例不同，网关按需路由。
-3. **依赖对齐**：若 B 依赖 A 的公共 API 改动，先在 A 执行 `mvn -pl ruoyi-common/ruoyi-common-core,ruoyi-api -am install -DskipTests`（见 [AGENTS.md](../../AGENTS.md) §1.1），再在 B 编译。
+3. **依赖对齐**：若 B 依赖 A 的公共 API 改动，先在 A 执行 `mvn -pl ruoyi-common/ruoyi-common-core,ruoyi-api -am install -DskipTests`（见 [AGENTS.md](../../AGENTS.md) §1），再在 B 编译。
 4. **前端并行**：每个 worktree 各自 `npm ci && npm run dev`，Vite 端口用 `--port` 区分，代理指向对应后端端口。
 5. **联调完成**：A、B 各自 PR 合并回 `develop` 后，删除 worktree（见 §6）。
 
@@ -170,4 +172,4 @@ git worktree list
 | [00-overview.md](00-overview.md) | §3.2 对 worktree 并行开发的总体约定 |
 | [02-development.md](02-development.md) | 开发阶段的编译/自测验证规则（每个 worktree 内同样适用） |
 | [04-release.md](04-release.md) | release/hotfix 分支在独立 worktree 中准备与验证 |
-| [AGENTS.md](../../AGENTS.md) | §5 分支命名约定；§1 编译验证规则（各 worktree 独立执行） |
+| [AGENTS.md](../../AGENTS.md) | §2.5 Git 工作流；§1 编译验证规则（各 worktree 独立执行） |
