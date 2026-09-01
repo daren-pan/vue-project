@@ -14,8 +14,7 @@ import org.flowable.engine.RepositoryService;
 import java.util.*;
 
 /**
- * 流程构建部署引擎
- * <p>接收前端表格配置的节点+连线 JSON，转为 Flowable BPMN 模型并部署。</p>
+ * 流程构建部署引擎：将前端节点+连线配置转为 BPMN 模型并部署。
  */
 public class ProcessBuilder {
 
@@ -35,7 +34,7 @@ public class ProcessBuilder {
         return new ProcessBuilder(key, name);
     }
 
-    // ────────── 节点 ──────────
+    // 节点
 
     public ProcessBuilder startEvent(String id, String name) {
         StartEvent e = new StartEvent();
@@ -60,7 +59,7 @@ public class ProcessBuilder {
     }
 
     /**
-     * 会签节点 —— 多人并行审批，全部通过才推进
+     * 会签：多人并行审批，全部通过才推进。
      */
     public ProcessBuilder userTaskMulti(String id, String name, List<String> assigneeList) {
         UserTask t = new UserTask();
@@ -86,7 +85,7 @@ public class ProcessBuilder {
         return this;
     }
 
-    // ────────── 连线 ──────────
+    // 连线
 
     public ProcessBuilder flow(String from, String to, String condition) {
         SequenceFlow sf = new SequenceFlow();
@@ -107,7 +106,7 @@ public class ProcessBuilder {
         return this;
     }
 
-    // ────────── 部署 ──────────
+    // 部署
 
     public String deploy(RepositoryService repositoryService, String deployUser) {
         return repositoryService.createDeployment()
@@ -118,7 +117,7 @@ public class ProcessBuilder {
                 .getId();
     }
 
-    // ────────── 从表格配置构建 ──────────
+    // 从表格配置构建
 
     public static String deployFromConfig(
             ProcessConfigDTO config,
