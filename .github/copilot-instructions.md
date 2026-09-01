@@ -55,5 +55,7 @@
 4. **Conventional Commits**：`<type>(<scope>): <subject>`，一条提交只做一件事。
 5. **必须走 PR/MR 评审**：禁止直接向 `main`/`develop` 推送；CI 全绿 + Approve → Squash 合并 → 删分支/删 worktree。
 6. **校验前置**：改动先编译 / lint / 测试通过，CI 全绿才可合并。
+7. **改完先给用户复核再推送**：完成本地验证（编译/lint/测试）后，先向用户展示改动与验证结果，**确认无误后才允许 push**；未经用户确认不得推送。
+8. **PR 备注避免乱码**：创建 PR 的标题/正文用 **UTF-8** 发送（脚本/API 设 `charset=utf-8`，或直接用 `gh` CLI）；避免中文在非 UTF-8 编码下变成 `??` 乱码。
 
 > 详细版见 [`docs/process/workflow-management.md`](docs/process/workflow-management.md) 与 [`docs/process/worktree-management.md`](docs/process/worktree-management.md)，冲突时以本节为准。

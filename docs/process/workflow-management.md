@@ -33,6 +33,11 @@
 
 - 改动先按 [AGENTS.md](../../AGENTS.md) §1 编译 / lint / 测试通过，CI 全绿才可合并。
 
+### 0.5 改动确认与 PR 编码（必须）
+
+- **改完先给用户复核再推送**：完成本地验证（编译/lint/测试）后，先向用户展示改动与验证结果（diff/截图/检查点），**确认无误后才允许 push**；未经用户确认不得推送。
+- **PR 标题/正文避免乱码**：用 **UTF-8** 编码发送（脚本/API 设 `ContentType='application/json; charset=utf-8'`，或直接用 `gh` CLI）；避免中文在非 UTF-8 编码下变成 `??`。示例：`Invoke-RestMethod -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($bodyJson))`。
+
 ---
 
 ## 1. 分支模型（GitFlow 简化版）
@@ -108,6 +113,7 @@ hotfix/<版本号>                  示例：hotfix/v1.2.1
 - [ ] 至少 1 名维护者 Approve（核心/跨服务变更至少 2 人）
 - [ ] 变更内容与 PR 描述一致，含验证说明（测试结果/截图）
 - [ ] 无未解决 conversation；代码符合 [../modules/coding-standard.md](../modules/coding-standard.md) 编码规范
+- [ ] 改动已**先给用户复核确认**（§0.5），PR 标题/正文为 **UTF-8 无乱码**（§0.5）
 - [ ] 不直接合入 `main`（`develop` 验证通过后再走 `release` 流程）
 
 ### 4.2 合并策略
