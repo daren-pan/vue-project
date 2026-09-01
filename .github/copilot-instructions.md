@@ -59,5 +59,6 @@
 8. **PR/合并备注避免乱码**：创建 PR 的标题/正文、**合并接口的 `commit_title`/`commit_message`** 一律用 **UTF-8** 发送（脚本/API 设 `ContentType='application/json; charset=utf-8'` 并以 UTF-8 字节发送，或直接用 `gh` CLI）；避免中文在非 UTF-8 编码下变成 `??` 乱码。
 9. **合并后分支保留约两周**：合并/推送后的分支**不要立即删除**（后续可能继续开发）；修改代码建立的分支**保留约两周**，仅当**超过两周且未再使用**时才删除。
 10. **推送/建分支前先拉远端对齐基线**：建分支前与 push 前，先 `git fetch origin <base>` 并把本地基线 **fast-forward 到远端最新**（或基于最新基线切分支），必要时 `rebase`；避免推送/合并时因基线落后产生冲突。**统一用 `git fetch origin` / `git pull origin <branch>`，禁止用裸 URL `git fetch <url>`**（裸 URL 不更新跟踪引用，`git status` 会误显 `[ahead N]`）；同步后 `git status -sb` 确认无诡异 ahead/behind。
+11. **合并后切回主分支并拉取最新**：PR/MR 合并后，`git checkout <base>` 回到主分支并 `git pull origin <base>` 拉取最新（用配置好的 `origin`，**勿用裸 URL**，见规则 10），确保本地与远端一致、后续开发基线为最新；合并后分支保留按规则 9。
 
 > 详细版见 [`docs/process/workflow-management.md`](docs/process/workflow-management.md) 与 [`docs/process/worktree-management.md`](docs/process/worktree-management.md)，冲突时以本节为准。
