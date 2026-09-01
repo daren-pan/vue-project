@@ -14,7 +14,7 @@
 - 禁止在 `main` / `develop`（含本项目开发型分支如 `springboot3`）上直接改代码。
 - 功能/缺陷从 `develop` 切 `feature/<ticket>-<desc>`、`bugfix/<ticket>-<desc>`；发布/热修从 `main` 切 `release/<ver>`、`hotfix/<ver>`。
 - 一个分支只做一个 issue；命名 kebab-case。
-- **建分支前先拉远端对齐基线**：先 `git fetch origin <base>` 并把本地基线 **fast-forward 到远端最新**（或基于最新基线切分支），必要时 `rebase`；push 前也先确认基线最新，避免推送/合并冲突。示例：`git fetch origin springboot3 && git merge --ff-only origin/springboot3`。
+- **建分支前先拉远端对齐基线**：先 `git fetch origin <base>` 并把本地基线 **fast-forward 到远端最新**（或基于最新基线切分支），必要时 `rebase`；push 前也先确认基线最新，避免推送/合并冲突。示例：`git pull origin springboot3` / `git fetch origin springboot3 && git merge --ff-only origin/springboot3`。**统一用配置好的 `origin`，禁止裸 URL `git fetch <url>`**（裸 URL 只写 `FETCH_HEAD`、不更新跟踪引用，`git status` 会误显 `[ahead N]`）；同步后 `git status -sb` 确认无诡异 ahead/behind。注意：本仓库 `origin` 的 **fetch 指向 github、push 指向 github+codeup**，两者**相互独立**；API 建/合并 PR 只作用于 github，若要两侧一致需分别 push。
 - **并行任务必须用 `git worktree`**（见 [worktree-management.md](worktree-management.md)），禁止在主工作树反复切分支。
 - **建立分支后必须立即向用户显示当前分支**：执行 `git branch --show-current`（worktree 用 `git worktree list`）确认，并在回复中明确贴出当前分支名（附关联 issue/task）。示例：`✔ 已在分支 feature/123-user-login 上，关联 #123`。让用户一眼看到改动落在哪个分支，避免在错误分支上提交。
 
