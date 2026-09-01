@@ -44,6 +44,13 @@
 - 合并/推送后的分支**不要立即删除**——后续可能仍需继续开发或回退追溯。
 - 修改代码建立的分支**保留约两周**；仅当**超过两周且未再使用**时才删除，删除后同步清理对应 worktree（见 [worktree-management.md](worktree-management.md)）。
 
+### 0.7 合并后切回主分支并拉取最新（必须）
+
+- PR/MR 合并后，**切回主分支并拉取最新**，确保本地与远端一致、后续开发基线为最新：
+  `git checkout <base> && git pull origin <base>`
+- **用配置好的 `origin`，勿用裸 URL**（见 §0.1 / 规则 10）——裸 URL 只写 `FETCH_HEAD`、不更新跟踪引用，`git status` 会误显 `[ahead N]`。
+- 示例：`git checkout springboot3 && git pull origin springboot3`；合并后分支保留按 §0.6。
+
 ---
 
 ## 1. 分支模型（GitFlow 简化版）
