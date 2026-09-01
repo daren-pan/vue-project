@@ -27,7 +27,7 @@
 
 - 禁止直接向 `main`/`develop` 推送；必须 `push` 到自己的 feature 分支并创建 PR/MR。
 - 合并门禁（全满足）：CI 全绿 + ≥1 维护者 Approve（核心/跨服务 ≥2）+ 描述与改动一致 + 无未解决 conversation。
-- 默认 Squash merge；合并后删除分支及对应 worktree。
+- 默认 Squash merge；合并后分支**保留约两周**（见 §0.6），不要立即删除。
 
 ### 0.4 校验前置（必须）
 
@@ -36,7 +36,12 @@
 ### 0.5 改动确认与 PR 编码（必须）
 
 - **改完先给用户复核再推送**：完成本地验证（编译/lint/测试）后，先向用户展示改动与验证结果（diff/截图/检查点），**确认无误后才允许 push**；未经用户确认不得推送。
-- **PR 标题/正文避免乱码**：用 **UTF-8** 编码发送（脚本/API 设 `ContentType='application/json; charset=utf-8'`，或直接用 `gh` CLI）；避免中文在非 UTF-8 编码下变成 `??`。示例：`Invoke-RestMethod -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($bodyJson))`。
+- **PR / 合并备注避免乱码**：创建 PR 的标题/正文、**合并接口的 `commit_title`/`commit_message`** 一律用 **UTF-8** 编码发送（脚本/API 设 `ContentType='application/json; charset=utf-8'` 并以 UTF-8 字节发送，或直接用 `gh` CLI）；避免中文在非 UTF-8 编码下变成 `??`。示例：`Invoke-RestMethod -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($json))`。
+
+### 0.6 分支保留期（必须）
+
+- 合并/推送后的分支**不要立即删除**——后续可能仍需继续开发或回退追溯。
+- 修改代码建立的分支**保留约两周**；仅当**超过两周且未再使用**时才删除，删除后同步清理对应 worktree（见 [worktree-management.md](worktree-management.md)）。
 
 ---
 
@@ -119,7 +124,7 @@ hotfix/<版本号>                  示例：hotfix/v1.2.1
 ### 4.2 合并策略
 
 - 默认 **Squash merge**：一个 PR 一个提交，保持 `develop` 历史线性；描述引用 PR 号。
-- 分支合并后**立即删除**，避免残留（配合 worktree 清理，见 [worktree-management.md](worktree-management.md)）。
+- 分支合并后**不要立即删除**：保留约两周（§0.6），仅当**超过两周且未再使用**才删除（配合 worktree 清理，见 [worktree-management.md](worktree-management.md)）。
 
 ### 4.3 代码审查清单
 

@@ -104,16 +104,17 @@ mvn -pl ruoyi-workflow -am spring-boot:run -Dspring-boot.run.profiles=dev
 
 ## 6. 清理流程
 
-分支合并回 `develop`/`main` 后，及时清理，避免 worktree 越堆越多：
+分支合并回 `develop`/`main` 后，**先保留约两周**（见 [workflow-management.md](workflow-management.md) §0.6），仅当**超过两周且未再使用**时才清理，避免误删仍需开发/追溯的分支：
 
 ```bash
+# 0) 先确认该分支超过两周未再使用（可选：git log -1 --format=%ci <branch> 看最后活动时间）
 # 1) 确认工作区干净（有改动先提交或按需保留）
 cd D:\RuoyiProject\demo\dsh-f123 && git status
 
 # 2) 删除 worktree（工作区干净时直接删）
 git worktree remove D:\RuoyiProject\demo\dsh-f123
 
-# 3) 删除已合并的分支（feature 合并后）
+# 3) 删除已合并且超期未使用的分支（feature 合并后）
 git branch -d feature/123-user-login      # 未合并会拒绝，确认无误再用 -D
 
 # 4) 清理失效记录
@@ -123,7 +124,7 @@ git worktree prune
 git worktree list && git branch -a
 ```
 
-清理节奏：**每个 PR 合并后顺手清**；每周 `git worktree prune` + 检查 `git worktree list` 一次。
+清理节奏：**合并后保留约两周**，到期且无新活动才删；每周 `git worktree prune` + 检查 `git worktree list`（顺带核对哪些分支临近两周上限）。
 
 ---
 
