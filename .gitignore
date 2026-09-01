@@ -65,3 +65,6 @@ docker/.env
 
 # Local mockito mock-maker config (not committed)
 **/mockito-extensions/org.mockito.plugins.MockMaker
+
+# 本地留痕文档（仅本地记录，不推送）
+docs/changelog/
