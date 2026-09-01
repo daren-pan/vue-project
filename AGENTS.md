@@ -52,6 +52,8 @@ Agent 必须严格按照本节判定阶段、加载文档、执行与留痕。
 
 **每次 commit/push 前**，必须把当天需求与改动追加到 `docs/changelog/<yyyy-MM-dd>.md`（约定见 `docs/changelog/README.md`），记录需求、改动清单、验证结果、commit sha。
 
+> 留痕文档**仅本地、不推送**：`docs/changelog/` 已加入 `.gitignore`，仅作本地变更记录，不要推向远端。
+
 ### 2.5 Git 工作流（硬性）
 
 1. **先建分支再改代码**：禁止在 `main`/`develop`/开发型分支（如 `springboot3`）上直接改；功能/缺陷从 `develop` 切 `feature/<ticket>-<desc>`、`bugfix/<ticket>-<desc>`，发布/热修从 `main` 切 `release/<ver>`、`hotfix/<ver>`；一个分支一个 issue。
