@@ -14,7 +14,7 @@ import org.flowable.engine.RepositoryService;
 import java.util.*;
 
 /**
- * 流程构建部署引擎：将前端节点+连线配置转为 BPMN 模型并部署。
+ * 流程构建器：将节点与连线配置转为 BPMN 模型并部署。
  */
 public class ProcessBuilder {
 
@@ -58,9 +58,7 @@ public class ProcessBuilder {
         return this;
     }
 
-    /**
-     * 会签：多人并行审批，全部通过才推进。
-     */
+    // 会签：多人并行，全通过才推进
     public ProcessBuilder userTaskMulti(String id, String name, List<String> assigneeList) {
         UserTask t = new UserTask();
         t.setId(id); t.setName(name);
@@ -69,7 +67,7 @@ public class ProcessBuilder {
         MultiInstanceLoopCharacteristics mi = new MultiInstanceLoopCharacteristics();
         mi.setSequential(false);
         mi.setElementVariable("assignee");
-        // 引用流程变量，发起时注入
+        // 流程变量，发起时注入
         mi.setInputDataItem("${assigneeList_" + id + "}");
         mi.setCompletionCondition("${nrOfCompletedInstances == nrOfInstances}");
         t.setLoopCharacteristics(mi);
@@ -155,7 +153,7 @@ public class ProcessBuilder {
             pb.flow(line.getFrom(), line.getTo(), line.getCondition());
         }
 
-        // 存储抄送人+会签信息到 BPMN documentation
+        // 抄送人+会签信息写入 BPMN documentation
         StringBuilder doc = new StringBuilder();
         if (config.getCcUsers() != null && !config.getCcUsers().isEmpty()) {
             doc.append("CC:").append(String.join(",", config.getCcUsers())).append(";");
